@@ -15,6 +15,8 @@ One entry per gotcha: symptom, cause, fix or status.
 
 ## Gotchas (keep in mind)
 
+- **The agent's own shell redirects HKCU writes into a private registry view** (2026-11-18). An install run from the Bash/PowerShell tools wrote the Explorer verbs where the user's Explorer never looked: the shell API in my process listed "Convert", `reg query` in the user's terminal said the key did not exist, and the user saw no menu entry for hours. Files are real, registry is not. **Run anything that must change the real registry (installer, `--install-menu`, `--uninstall-menu`, round-trip checks) through `run_in_terminal` and verify with a `Test-Path` typed there.** The "round trip" in `BUILD_HISTORY.md` proved the files and the installer logic, not the real registry.
+
 - **Explorer caches context-menu verbs per file type** (2026-11-18): after the first install the entry was missing on a `.gif` in an already-open Explorer, although the shell API (`Shell.Application` `Verbs()`) in a fresh process listed it. `shell_integration` now sends `SHChangeNotify(SHCNE_ASSOCCHANGED)` after install and uninstall. Whether that was the cause is not confirmed until the user sees the entry.
 
 - **Qt offscreen has no fonts**: a PDF written under `QT_QPA_PLATFORM=offscreen` has no text. `test_ui_smoke` sets it in `setUpModule`, not at import. Document code must create `QApplication`, not `QGuiApplication`, or the window tests crash (exit 0xC0000409) when run in the same process.
