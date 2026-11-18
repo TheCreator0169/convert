@@ -22,8 +22,11 @@ def cli(argv):
     code = 0
     for f in files:
         try:
-            for out in convert_file(f, fmt_id, st["options"], st["trash_originals"]):
+            notes = []
+            for out in convert_file(f, fmt_id, st["options"], st["trash_originals"], notes=notes):
                 print(f"{f} -> {out}")
+            for n in notes:
+                print(f"warning: {n}", file=sys.stderr)
         except Exception as e:  # report each file, keep going
             settings.setup_logging().exception("failed %s", f)
             print(f"{f}: {e}", file=sys.stderr)

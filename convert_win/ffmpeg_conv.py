@@ -72,11 +72,11 @@ def build_args(ffmpeg, src, dst, kind, fmt, opts, have=frozenset()):
     if kind == "audio":
         return head + ["-vn", "-map", "0:a:0", "-map_metadata", "0"] + _audio_args(fmt, opts) + [dst]
     if fmt.id == "gif":
-        vf = (f"fps={opts['fps']},scale='min({opts['width']},iw)':-1:flags=lanczos,"
+        vf = (f"fps={max(1, opts['fps'])},scale='min({opts['width']},iw)':-1:flags=lanczos,"
               "split[a][b];[a]palettegen[p];[b][p]paletteuse")
         return head + ["-an", "-vf", vf, "-loop", "0", dst]
     codec = fmt.codec
-    q = {"high": 0, "medium": 1, "low": 2}[opts["video_quality"]]
+    q = {"high": 0, "medium": 1, "low": 2}.get(opts["video_quality"], 1)
     args = head + ["-map", "0:v:0"]
     if codec == "prores_ks":
         args += ["-c:v", codec, "-profile:v", "2", "-pix_fmt", "yuv422p10le"]

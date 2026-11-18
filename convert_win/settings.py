@@ -15,13 +15,30 @@ def _dir(var):
     return d
 
 
+def _coerce(val, default):
+    """Keep `val` only when it has the type of `default` (a bool is not an int); else the default."""
+    if isinstance(default, bool):
+        ok = isinstance(val, bool)
+    elif isinstance(default, int):
+        ok = isinstance(val, int) and not isinstance(val, bool)
+    else:
+        ok = isinstance(val, type(default))
+    return val if ok else default
+
+
 def load():
     try:
-        saved = json.loads((_dir("APPDATA") / "settings.json").read_text("utf-8"))
+        saved = json.loads((_dir("APPDATA") / "settings.json").read_text("utf-8-sig"))
     except (OSError, ValueError):
         saved = {}
-    return {"trash_originals": bool(saved.get("trash_originals", False)),
-            "options": {k: {**d, **saved.get("options", {}).get(k, {})} for k, d in DEFAULTS.items()}}
+    if not isinstance(saved, dict):
+        saved = {}
+    saved_opts = saved.get("options") if isinstance(saved.get("options"), dict) else {}
+    options = {}
+    for group, defaults in DEFAULTS.items():
+        mine = saved_opts.get(group) if isinstance(saved_opts.get(group), dict) else {}
+        options[group] = {k: _coerce(mine.get(k, d), d) for k, d in defaults.items()}
+    return {"trash_originals": saved.get("trash_originals") is True, "options": options}
 
 
 def save(settings):

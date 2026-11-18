@@ -40,27 +40,30 @@ def _choice_text(key, c):
 
 class Worker(QThread):
     progress = Signal(int, str)
-    done = Signal(list, list)
+    done = Signal(list, list, list)
 
     def __init__(self, files, fmt_id, options, trash):
         super().__init__()
         self.files, self.fmt_id, self.options, self.trash = files, fmt_id, options, trash
         self.cancel = threading.Event()
+        self.cancelled = False  # True only when some file was skipped or interrupted
 
     def run(self):
-        outs, errs = [], []
+        outs, errs, notes = [], [], []
         for i, f in enumerate(self.files):
             if self.cancel.is_set():
+                self.cancelled = True
                 break
             self.progress.emit(i, Path(f).name)
             try:
-                outs += convert_file(f, self.fmt_id, self.options, self.trash, self.cancel)
+                outs += convert_file(f, self.fmt_id, self.options, self.trash, self.cancel, notes)
             except Cancelled:
+                self.cancelled = True
                 break
             except Exception as e:  # one bad file must not stop the batch
-                log.exception("failed %s", f)
+                log.exception("failed %s", Path(f).name)
                 errs.append((Path(f).name, str(e)))
-        self.done.emit([str(o) for o in outs], errs)
+        self.done.emit([str(o) for o in outs], errs, notes)
 
 
 class Window(QWidget):
@@ -69,7 +72,7 @@ class Window(QWidget):
         self.setWindowTitle(f"Convert {CONVERT_VERSION}")
         self.setAcceptDrops(True)
         self.setMinimumSize(520, 560)
-        self.files, self.worker, self.outs = [], None, []
+        self.files, self.worker, self.outs, self.pending = [], None, [], []
         self.st = settings.load()
         self.opt_widgets = {}
 
@@ -122,7 +125,9 @@ class Window(QWidget):
 
     # --- files -------------------------------------------------------------------------------------------------
     def add_files(self, paths):
-        if self.worker:
+        if self.worker:  # a batch is running: add these when it ends
+            self.pending += [str(p) for p in paths]
+            self.msg.setText("New files will be added when the current batch ends.")
             return
         for p in paths:
             p = str(Path(p))
@@ -197,7 +202,8 @@ class Window(QWidget):
                 w.setCurrentIndex(w.findData(val))
             else:
                 w = QSpinBox()
-                w.setRange(*RANGE[key])
+                lo, hi = RANGE[key]
+                w.setRange(1 if group == "gif" and key == "fps" else lo, hi)
                 w.setValue(val)
             self.opt_widgets[key] = w
             self.form.addRow(LABEL[key], w)
@@ -222,41 +228,47 @@ class Window(QWidget):
         self.go.setEnabled(False)
         self.stop.show()
         self.bar.setRange(0, len(self.files) if len(self.files) > 1 else 0)
-        self.msg.setObjectName("muted")
         self.worker.start()
+
+    def _say(self, text, kind):
+        """Set the status line and re-polish it so the colour of `kind` (muted, ok, error) applies."""
+        self.msg.setObjectName(kind)
+        self.msg.setText(text)
+        self.msg.style().unpolish(self.msg)
+        self.msg.style().polish(self.msg)
 
     def _progress(self, i, name):
         self.bar.setValue(i)
-        self.msg.setText(f"Converting {name}  ({i + 1}/{len(self.files)})")
+        self._say(f"Converting {name}  ({i + 1}/{len(self.files)})", "muted")
 
     def _cancel(self):
         if self.worker:
             self.worker.cancel.set()
             self.stop.setEnabled(False)
 
-    def _done(self, outs, errs):
+    def _done(self, outs, errs, notes=()):
         w, self.worker = self.worker, None
         w.wait()
         self.outs = outs
         self.bar.setRange(0, 1)
-        self.bar.setValue(1 if not w.cancel.is_set() else 0)
+        self.bar.setValue(0 if w.cancelled else 1)
         self.stop.hide()
         self.stop.setEnabled(True)
         if w.trash:
             self.files = [f for f in self.files if Path(f).exists()]
-        self.msg.setObjectName("error" if errs else "ok")
         if errs:
-            self.msg.setText(f"{len(outs)} file(s) written, {len(errs)} failed: " + "; ".join(f"{n}: {m}" for n, m in errs))
-        elif w.cancel.is_set():
-            self.msg.setText("Cancelled.")
+            text = f"{len(outs)} file(s) written, {len(errs)} failed: " + "; ".join(f"{n}: {m}" for n, m in errs)
+        elif w.cancelled:
+            text = "Cancelled."
         else:
-            self.msg.setText(f"Done: {len(outs)} file(s) written next to the originals.")
-        text, name = self.msg.text(), self.msg.objectName()
+            text = f"Done: {len(outs)} file(s) written next to the originals."
+        if notes:
+            text += "\n" + "\n".join(notes)
+        kind = "error" if errs or notes else "ok"
+        pending, self.pending = self.pending, []
         self._refresh()
-        self.msg.setObjectName(name)
-        self.msg.setText(text)
-        self.msg.style().unpolish(self.msg)
-        self.msg.style().polish(self.msg)
+        self.add_files(pending)
+        self._say(text + ("\nNew files were added." if pending else ""), kind)
         self.open_btn.setVisible(bool(outs))
 
     def _open_folder(self):
@@ -266,7 +278,7 @@ class Window(QWidget):
     def closeEvent(self, e):
         if self.worker:
             self.worker.cancel.set()
-            self.worker.wait(5000)
+            self.worker.wait(30000)  # let the job stop before Qt destroys the thread
         super().closeEvent(e)
 
 

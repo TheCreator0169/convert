@@ -9,6 +9,12 @@ from PySide6.QtWidgets import QApplication
 
 def _read(path):
     raw = Path(path).read_bytes()
+    if raw.startswith((b"\xff\xfe", b"\xfe\xff")):  # UTF-16 BOM (UTF-32 LE starts the same way, so try it first); UTF-32 BE is not handled
+        for enc in ("utf-32", "utf-16"):
+            try:
+                return raw.decode(enc)
+            except UnicodeDecodeError:
+                pass
     try:
         return raw.decode("utf-8-sig")
     except UnicodeDecodeError:
@@ -134,7 +140,11 @@ def _write_rtf(doc, dst):
     Path(dst).write_text("".join(parts), "ascii")
 
 
+LOSSY_IN = {"rtf": "RTF formatting was dropped (text only)", "odt": "ODT styles and tables were dropped (text only)"}
+
+
 def convert(src, dst, fmt, opts):
+    """Returns a warning string when the source was read as plain text only, else None."""
     QApplication.instance() or QApplication(["convert"])  # QApplication, not QGuiApplication: the window needs that type
     doc = load(src)
     if fmt.id == "pdf":
@@ -153,3 +163,4 @@ def convert(src, dst, fmt, opts):
         Path(dst).write_text(doc.toHtml(), "utf-8")
     else:
         Path(dst).write_text(doc.toPlainText(), "utf-8")
+    return LOSSY_IN.get(Path(src).suffix.lower().lstrip("."))

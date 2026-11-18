@@ -6,33 +6,47 @@ from send2trash import send2trash
 
 from . import doc_conv, ffmpeg_conv, image_conv, pdf_conv
 from .formats import option_key, output_fmt, unique_path
+from .process import Cancelled
 
 log = logging.getLogger("convert")
 
 
-def convert_file(src, fmt_id, options, trash_original=False, cancel=None):
-    """`options` maps option group (audio, video, gif, image, doc, pdf) to its dict. Raises on failure."""
+def convert_file(src, fmt_id, options, trash_original=False, cancel=None, notes=None):
+    """`options` maps option group (audio, video, gif, image, doc, pdf) to its dict. Raises on failure.
+    Warnings go to the `notes` list. The original is trashed only when the output is complete (no warning)."""
+    notes = [] if notes is None else notes
     src = Path(src)
     kind, fmt = output_fmt(src, fmt_id)
     opts = options[option_key(kind, fmt_id)]
-    log.info("convert %s -> %s", src, fmt_id)
+    log.info("convert %s -> %s", src.name, fmt_id)
+    if cancel is not None and cancel.is_set():
+        raise Cancelled()
+    warn = None
     if kind == "pdf":
-        outs = pdf_conv.convert(src, fmt, opts)
+        outs = pdf_conv.convert(src, fmt, opts, cancel)
     else:
         dst = unique_path(src, fmt.ext)
         try:
             if kind in ("audio", "video"):
                 ffmpeg_conv.convert(src, dst, kind, fmt, opts, cancel)
             elif kind == "image":
-                image_conv.convert(src, dst, fmt, opts)
+                warn = image_conv.convert(src, dst, fmt, opts)
             else:
-                doc_conv.convert(src, dst, fmt, opts)
+                warn = doc_conv.convert(src, dst, fmt, opts)
             if not dst.exists() or dst.stat().st_size == 0:
                 raise RuntimeError("converter wrote no output")
         except BaseException:
             dst.unlink(missing_ok=True)
             raise
         outs = [dst]
-    if trash_original:
-        send2trash(str(src))
+    if warn:
+        notes.append(f"{src.name}: {warn}")
+    if trash_original and warn:
+        notes.append(f"{src.name}: original kept")
+    elif trash_original:
+        try:
+            send2trash(str(src))
+        except Exception as e:  # the output is good: report it, do not fail the file
+            log.warning("recycle bin failed for %s: %s", src.name, e)
+            notes.append(f"{src.name}: converted, but the original could not be moved to the Recycle Bin ({e})")
     return outs
