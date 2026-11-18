@@ -11,7 +11,6 @@ One entry per gotcha: symptom, cause, fix or status.
 - **Animated GIF and multi-image HEIC** keep only the first frame (same limit as the macOS original).
 - **Markdown** covers common syntax only: no footnotes, embedded HTML or images.
 
-- **Document to PDF prints a page number** at the bottom of each page (Qt's `QTextDocument.print` does it). Not removed yet.
 
 ## Gotchas (keep in mind)
 
@@ -31,4 +30,8 @@ One entry per gotcha: symptom, cause, fix or status.
 - A long animated GIF to PDF/WebP/TIFF loads every frame in memory; a very long one can fail with a memory error (nothing is trashed then).
 - Single-instance pipe name is predictable (`Convert-GUI-<user>`): a second local account that creates it first can receive the file paths of this user's launches. Needs another local account; nothing converts without a click. Audit 2026-11-18, LOW, not planned.
 - H9 is half done: versions are pinned in `requirements.txt`; hashes (`--require-hashes`) and a fresh-venv build need `pip-tools` (a download, the user's OK).
-- DOCX reader (v0.1.3): text boxes, footnotes/endnotes, legacy objects (`w:pict`, `w:object`) and EMF/WMF/SVG pictures are not carried over (warning, original kept). Nested lists are flattened to one level; headers/footers are not read. ODT and RTF are still text only.
+- DOCX reader (v0.1.4): text boxes, legacy objects (`w:pict`, `w:object`) and EMF/WMF/SVG pictures are not carried over (warning, original kept). Headers and footers are deliberately not read (they repeat on every page). Footnotes and endnotes are listed at the end as [n]. Nested lists keep up to 6 levels.
+- DOCX writer (v0.1.4): lists (3 levels), tables (merged and nested), links, pictures, headings, bold and italic are written; fonts, colours, alignment, column widths and page setup are not.
+- ODT reader (v0.1.4, own parser, odfpy removed): headings, bold/italic from named styles, links, lists, tables, footnotes, PNG/JPEG/GIF/BMP pictures. Not read: text frames, drawings, comments, tracked changes, styles set directly on paragraphs other than bold/italic. Tested with files built by hand and by Qt's writer, not with LibreOffice files.
+- RTF reader (v0.1.4, own parser, striprtf removed): paragraphs, bold/italic, links, tables, unicode and code page characters. Headings, lists, pictures and styles are not interpreted (warning, original kept). Tested with hand-written RTF, not Word files.
+- PDF from a document (v0.1.4) is drawn page by page with the margins from the options (15 mm) and no page number; the side margins are narrower than in v0.1.3, so a line holds more text.

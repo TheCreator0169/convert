@@ -135,7 +135,7 @@ class DocSafety(Base):
         notes = []
         convert_file(src, "txt", self.opts, trash_original=True, notes=notes)
         self.assertEqual(self.trashed, [])
-        self.assertTrue(any("text only" in n for n in notes))
+        self.assertTrue(any("not carried over" in n for n in notes))
 
 
     def test_utf16_that_looks_like_utf32_is_not_garbled(self):  # reviewer finding 1
@@ -151,14 +151,14 @@ class DocSafety(Base):
             convert_file(src, "txt", self.opts, trash_original=True)
         self.assertEqual(self.trashed, [])
 
-    def test_docx_with_a_footnote_is_kept_with_a_warning(self):  # reviewer finding 9
+    def test_docx_with_a_legacy_object_is_kept_with_a_warning(self):  # reviewer finding 9
         import docx
         from docx.oxml import OxmlElement
 
         d = docx.Document()
         p = d.add_paragraph("see ")
         r = OxmlElement("w:r")
-        r.append(OxmlElement("w:footnoteReference"))
+        r.append(OxmlElement("w:pict"))
         p._p.append(r)
         src = self.dir / "l.docx"
         d.save(src)

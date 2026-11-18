@@ -1,6 +1,6 @@
 # Convert for Windows: roadmap
 
-Status 2026-11-18: **v0.1.0 works and is public** (`github.com/TheCreator0169/convert`, MIT). Window, right-click menu,
+Status 2026-11-18: **v0.1.3 is released**; the plan to v0.2.0 is in "Release plan" below. Older status: **v0.1.0 works and is public** (`github.com/TheCreator0169/convert`, MIT). Window, right-click menu,
 installer, audio/video/image/document/PDF conversion, install and uninstall checked on the real PC.
 This file plans what comes next. Nothing below is started.
 
@@ -16,6 +16,23 @@ Goal stays the same: right-click a file, choose Convert, done. 100 % local, no a
 6. Push and release only on the user's word. Escalation: Haiku x3, Sonnet, Opus 5.5 medium for a blocker only.
 
 Evidence labels: **reproduced** = Sonnet ran it and saw the failure; **read** = an agent read the code, not run yet.
+
+## Release plan 0.1.4 to 0.2.0 (agreed 2026-11-18)
+
+Every version ends the same way: tests first, all suites green, local commit, `build.ps1`, frozen smoke test, **you test**, then on your word: push, tag, GitHub release with the setup and its SHA256, download and compare the hash. One version, one release, no bundling.
+
+| Version | Theme | Items | You test |
+|---|---|---|---|
+| v0.1.4 (built, being tested) | Output quality of documents | DOCX writer keeps lists, tables, links, images (today it writes text and bold/italic only); DOCX reader: footnotes, nested list levels, headers/footers; remove the page number Qt prints on PDFs; ODT and RTF read with structure (tables, bold) instead of text only | convert your own .docx / .odt / .rtf to PDF and DOCX and look |
+| v0.1.5 | Cancel and limits | Cancel interrupts a running image/document/PDF job (known issue); GIF/WebP/TIFF frame cap instead of a memory error; "Open log folder" and a copyable error per file (U3, text only, no restyle) | cancel a big job; convert a long GIF |
+| v0.1.6 | Audio and video | Choose which audio track and keep or drop subtitles (instead of warning only); ffprobe-based info; argument-level tests for every encoder; real conversion for every audio id (WMA, AC3, WavPack, MP2, ALAC 24-bit), HEVC, AV1, ProRes | convert a film with 2 audio tracks; a hardware encoder if your GPU has one |
+| v0.1.7 | Tests and CI | Coverage list below (120+ tests); GitHub Actions on `windows-latest` (D6); frozen smoke test inside `build.ps1`; H9 hashes (`pip-tools`, a download: your OK) | nothing visible; CI badge green |
+| v0.1.8 | Installer | I1-I9: license page, optional desktop shortcut, French and English, `InstallDelete`, `AppMutex`, ffmpeg hint page (D3), real install / upgrade / uninstall in **your** terminal | install over v0.1.3, right-click, uninstall |
+| v0.1.9 | Window behaviour (no restyle) | U7 remember size, position and last format; U8 keyboard; U9 accessibility; U10 Add files, Reset options; U12 ffmpeg-missing helper | use the window with the keyboard only |
+| v0.2.0 | Window look | U1, U2, U4, U5, U6, U11. Before any code: I list each element with position, size, colour, alignment and wait for your OK | **you look at it** (I cannot judge looks) |
+
+Order rationale: data quality first (a bad conversion is worse than an ugly window), then safety nets, then installer, then the window, so the window work lands on a tested base.
+Decisions still open (defaults apply): D2 update check = not built, D3 ffmpeg bundling = external, D4 signing = none (README says so), D5 light theme = follow Windows, D6 CI = yes, D7 reflog cleanup = ask first.
 
 ## Decisions needed from the user
 
@@ -73,7 +90,7 @@ Done when: **security-auditor** re-runs the same brief and returns no HIGH or ME
 DOCX reader gaps (all **read**, doc_conv.py:26-40): hyperlink text dropped, content controls and table of contents skipped, images dropped, nested tables dropped, merged cells repeated, lists lose bullets, only English "Heading N" styles become headings (a French "Titre 1" does not). Plan: handle each with a test file, warn when something is dropped, never trash a source that lost content. Also: PDF "Titre/Heading" detection for FR styles, UTF-16 and BOM text round trips.
 Agents: tester (builds sample docx), builder, reviewer. Done when: a French docx with a link, a list, a picture and a table converts to PDF and every element is present.
 
-## v0.2.0: window polish (needs the user's OK on the element list first)
+## v0.2.0 (window polish): items U1-U12 (needs the user's OK on the element list first)
 
 From the UI survey (ui.py, theme.py). Nothing changes until you approve the list of elements with position, size, colour.
 
@@ -94,7 +111,7 @@ From the UI survey (ui.py, theme.py). Nothing changes until you approve the list
 
 Done when: offscreen smoke test builds every state, frozen exe launches, **you** look at it (I cannot judge looks).
 
-## v0.3.0: installer and release
+## v0.1.8 (installer): items I1-I9
 
 | ID | Item | Today (convert.iss) | Agent |
 |---|---|---|---|
@@ -110,7 +127,7 @@ Done when: offscreen smoke test builds every state, frozen exe launches, **you**
 
 Done when: install, upgrade over the previous version, and uninstall are clean in the real registry; the release page has the setup and its SHA256.
 
-## v0.4.0: tests and CI
+## v0.1.7 (tests and CI)
 
 Gaps from the coverage survey (54 tests today): real conversion for every audio id (WMA, AC3, WavPack, MP2, WAV, M4A, ALAC 24-bit), HEVC, AV1, ProRes, fps, keep_audio, hardware-encoder flags (argument level), every image input type (JPG, HEIC, AVIF, TIFF, GIF, BMP, WebP, palette, CMYK), document inputs (HTML, RTF, ODT, UTF-8 and UTF-16 text, `.markdown`), multi-page PDF naming, JPEG pages, dpi, encrypted and corrupt PDF, a corrupt file per family, a silent video to audio, CLI (exit codes, format listing, unknown id, install/uninstall dispatch), settings (corrupt, wrong type, BOM), UI (cancel, drag, ffmpeg missing with a mock, pipe success path, closing during a run), shell (foreign verb, `installed()`, values-only key), build refusals, a scripted frozen-exe smoke test run by `build.ps1`.
 CI (D6): GitHub Actions on `windows-latest` running the suite on every push.

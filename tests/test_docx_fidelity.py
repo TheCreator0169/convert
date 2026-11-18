@@ -101,6 +101,34 @@ class Docx(unittest.TestCase):
         self.assertIn('rowspan="2"', out)
         self.assertEqual(out.count("tall"), 1)
 
+    def test_footnote_text_is_listed_at_the_end(self):
+        from docx.opc.constants import CONTENT_TYPE as CT
+        from docx.opc.packuri import PackURI
+        from docx.opc.part import Part
+
+        d = docx.Document()
+        p = d.add_paragraph("claim")
+        r = OxmlElement("w:r")
+        ref = OxmlElement("w:footnoteReference")
+        ref.set(qn("w:id"), "2")
+        r.append(ref)
+        p._p.append(r)
+        xml = (f'<w:footnotes {nsdecls("w")}><w:footnote w:id="2"><w:p><w:r><w:t>the source</w:t></w:r></w:p>'
+               "</w:footnote></w:footnotes>").encode()
+        part = Part(PackURI("/word/footnotes.xml"), CT.WML_FOOTNOTES, xml, d.part.package)
+        d.part.relate_to(part, RT.FOOTNOTES)
+        out = self.html(d)
+        self.assertIn("claim<sup>[1]</sup>", out)
+        self.assertIn("[1] the source", out)
+
+    def test_nested_list_levels(self):
+        d = docx.Document()
+        d.add_paragraph("a", style="List Bullet")
+        d.add_paragraph("b", style="List Bullet 2")
+        d.add_paragraph("c", style="List Bullet")
+        out = self.html(d)
+        self.assertIn("<ul><li>a</li><ul><li>b</li></ul><li>c</li></ul>", out)
+
     def test_french_document_converts_to_pdf_with_every_element(self):  # roadmap "done when"
         d = docx.Document()
         d.styles.add_style("Titre 1", 1)
