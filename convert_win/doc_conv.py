@@ -63,7 +63,10 @@ def _docx_html(path):
     from docx.text.run import Run
 
     d = docx.Document(str(path))
-    numbering = d.part.numbering_part.element
+    try:
+        numbering = d.part.numbering_part.element
+    except (KeyError, NotImplementedError):  # no numbering part (Google Docs, simple generators): python-docx cannot create one
+        numbering = None
     notes = []  # footnote and endnote texts in reading order, shown as a numbered list at the end
 
     def note_text(kind, nid):
@@ -108,7 +111,7 @@ def _docx_html(path):
     def list_kind(p, name):  # (list tag, nesting level) or (None, 0)
         ppr = p._p.pPr
         num = ppr.numPr if ppr is not None else None
-        if num is not None and num.numId is not None and num.numId.val:
+        if num is not None and num.numId is not None and num.numId.val and numbering is not None:
             lvl = num.ilvl.val if num.ilvl is not None else 0
             fmt = numbering.xpath(
                 f'w:abstractNum[@w:abstractNumId=../w:num[@w:numId="{num.numId.val}"]/w:abstractNumId/@w:val]'

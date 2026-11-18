@@ -17,7 +17,7 @@ def cli(argv):
             print(f"{t}: " + " ".join(fmts))
         return 0
     fmt_id, files = argv[0], argv[1:]
-    from .converter import convert_file, scrub
+    from .converter import convert_file, describe, scrub
     st = settings.load()
     code = 0
     for f in files:
@@ -28,8 +28,8 @@ def cli(argv):
             for n in notes:
                 print(f"warning: {n}", file=sys.stderr)
         except Exception as e:  # report each file, keep going
-            settings.setup_logging().error("failed %s: %s", Path(f).name, scrub(e, f))
-            print(f"{f}: {e}", file=sys.stderr)
+            settings.setup_logging().error("failed %s: %s", Path(f).name, scrub(describe(e), f))
+            print(f"{f}: {describe(e)}", file=sys.stderr)
             code = 1
     return code
 

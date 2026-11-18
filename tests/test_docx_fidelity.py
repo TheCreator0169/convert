@@ -2,6 +2,7 @@
 import io
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 import docx
@@ -100,6 +101,27 @@ class Docx(unittest.TestCase):
         out = self.html(d)
         self.assertIn('rowspan="2"', out)
         self.assertEqual(out.count("tall"), 1)
+
+    def test_docx_without_a_numbering_part_still_converts(self):  # regression: v0.1.3 raised NotImplementedError
+        d = docx.Document()
+        d.add_paragraph("plain text")
+        d.add_paragraph("item", style="List Bullet")
+        for rid, rel in list(d.part.rels.items()):
+            if rel.reltype == RT.NUMBERING:
+                del d.part.rels[rid]
+        src = self.dir / "nonum.docx"
+        d.save(src)
+        with zipfile.ZipFile(src) as z:
+            self.assertNotIn("word/numbering.xml", z.namelist())
+        (out,) = convert_file(src, "pdf", self.opts)
+        with pymupdf.open(out) as pdf:
+            self.assertIn("plain text", pdf[0].get_text())
+
+    def test_error_without_a_message_still_says_something(self):
+        from convert_win.converter import describe
+
+        self.assertEqual(describe(NotImplementedError()), "NotImplementedError")
+        self.assertEqual(describe(ValueError("bad")), "bad")
 
     def test_footnote_text_is_listed_at_the_end(self):
         from docx.opc.constants import CONTENT_TYPE as CT

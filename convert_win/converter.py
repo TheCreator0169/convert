@@ -12,6 +12,11 @@ from .process import Cancelled
 log = logging.getLogger("convert")
 
 
+def describe(e):
+    """Text for an error: some exceptions (NotImplementedError, KeyError()) carry no message."""
+    return str(e) or type(e).__name__
+
+
 def scrub(text, path):
     """Replace the folder of `path` in `text` so logs keep file names only."""
     folder = str(Path(os.path.abspath(path)).parent)

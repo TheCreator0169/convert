@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFormLayout, 
                                QListWidget, QProgressBar, QPushButton, QSpinBox, QVBoxLayout, QWidget)
 
 from . import settings, theme
-from .converter import convert_file, scrub
+from .converter import convert_file, describe, scrub
 from .formats import DEFAULTS, file_type, option_key, outputs_for, output_fmt
 from .process import Cancelled, find_tool
 from .version import CONVERT_VERSION
@@ -63,8 +63,8 @@ class Worker(QThread):
                 self.cancelled = True
                 break
             except Exception as e:  # one bad file must not stop the batch
-                log.error("failed %s: %s", Path(f).name, scrub(e, f))
-                errs.append((Path(f).name, str(e)))
+                log.error("failed %s: %s", Path(f).name, scrub(describe(e), f))
+                errs.append((Path(f).name, describe(e)))
         self.done.emit([str(o) for o in outs], errs, notes)
 
 
