@@ -12,8 +12,8 @@ SCALE = 1.2  # arrow size around the icon centre
 
 def _arrows(u):
     """Right-pointing arrow on top, left-pointing below; polygons in pixels (u = 1/10 of the icon)."""
-    right = [(2.4, 3.35), (6.0, 3.35), (6.0, 2.55), (7.8, 3.75), (6.0, 4.95), (6.0, 4.15), (2.4, 4.15)]
-    left = [(7.6, 5.85), (4.0, 5.85), (4.0, 5.05), (2.2, 6.25), (4.0, 7.45), (4.0, 6.65), (7.6, 6.65)]
+    right = [(2.4, 3.38), (6.0, 3.38), (6.0, 2.58), (7.8, 3.78), (6.0, 4.98), (6.0, 4.18), (2.4, 4.18)]
+    left = [(7.6, 5.82), (4.0, 5.82), (4.0, 5.02), (2.2, 6.22), (4.0, 7.42), (4.0, 6.62), (7.6, 6.62)]
     return [[((5 + (x - 5) * SCALE) * u, (5 + (y - 5) * SCALE) * u) for x, y in a] for a in (right, left)]
 
 
