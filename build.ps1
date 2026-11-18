@@ -25,7 +25,7 @@ Get-ChildItem dist -Filter 'Convert-Setup-*.exe' -ErrorAction SilentlyContinue |
 }
 & $py tools\make_icon.py | Out-Null
 & $py -m PyInstaller --noconfirm --clean --windowed --name Convert --icon assets\convert.ico `
-    --collect-all pillow_heif --collect-all pillow_avif convert.pyw
+    --add-data "assets\logo.png;assets" --collect-all pillow_heif --collect-all pillow_avif convert.pyw
 if ($LASTEXITCODE) { throw "PyInstaller failed" }
 
 $rel = "archives\$Version-release"

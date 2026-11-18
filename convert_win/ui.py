@@ -9,6 +9,7 @@ import threading
 from pathlib import Path
 
 from PySide6.QtCore import QThread, QTimer, Signal
+from PySide6.QtGui import QIcon
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel,
                                QListWidget, QProgressBar, QPushButton, QSpinBox, QVBoxLayout, QWidget)
@@ -70,6 +71,8 @@ class Window(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f"Convert {CONVERT_VERSION}")
+        root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))  # frozen: bundled data folder
+        self.setWindowIcon(QIcon(str(root / "assets" / "logo.png")))
         self.setAcceptDrops(True)
         self.setMinimumSize(520, 560)
         self.files, self.worker, self.outs, self.pending = [], None, [], []
