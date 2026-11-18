@@ -22,3 +22,4 @@ Four Haiku agents (scout x2, reviewer, security-auditor) produced it on 2026-11-
 
 - 2026-11-18: environment: Python 3.13 present; ffmpeg and Inno Setup missing. 46 tests green; frozen smoke OK for image, doc, PDF.
 - 2026-11-18: all work this session was done by Sonnet directly; no Haiku agent was invoked (agents created mid-session, not loaded). Next session they exist.
+- 2026-11-18: v0.1.3 done by Sonnet directly: DOCX reader (links, content controls, pictures, lists, nested and merged tables, FR/DE/ES/IT heading names), ffmpeg warns on extra audio tracks and subtitles. 104 tests green (1 skipped). Version string unchanged (0.1.1); not built, not committed.

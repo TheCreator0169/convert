@@ -68,7 +68,7 @@ Done when: **security-auditor** re-runs the same brief and returns no HIGH or ME
 
 **Release v0.1.1 here** (S + H items), unless D1 says otherwise.
 
-## v0.1.3: document fidelity
+## v0.1.3: document fidelity (DONE 2026-11-18, not committed; also extra audio tracks and subtitles now warn)
 
 DOCX reader gaps (all **read**, doc_conv.py:26-40): hyperlink text dropped, content controls and table of contents skipped, images dropped, nested tables dropped, merged cells repeated, lists lose bullets, only English "Heading N" styles become headings (a French "Titre 1" does not). Plan: handle each with a test file, warn when something is dropped, never trash a source that lost content. Also: PDF "Titre/Heading" detection for FR styles, UTF-16 and BOM text round trips.
 Agents: tester (builds sample docx), builder, reviewer. Done when: a French docx with a link, a list, a picture and a table converts to PDF and every element is present.

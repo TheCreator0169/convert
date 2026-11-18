@@ -151,17 +151,15 @@ class DocSafety(Base):
             convert_file(src, "txt", self.opts, trash_original=True)
         self.assertEqual(self.trashed, [])
 
-    def test_docx_with_hyperlink_is_kept_with_a_warning(self):  # reviewer finding 9
+    def test_docx_with_a_footnote_is_kept_with_a_warning(self):  # reviewer finding 9
         import docx
-        from docx.opc.constants import RELATIONSHIP_TYPE as RT
         from docx.oxml import OxmlElement
-        from docx.oxml.ns import qn
 
         d = docx.Document()
         p = d.add_paragraph("see ")
-        h = OxmlElement("w:hyperlink")
-        h.set(qn("r:id"), d.part.relate_to("https://example.com", RT.HYPERLINK, is_external=True))
-        p._p.append(h)
+        r = OxmlElement("w:r")
+        r.append(OxmlElement("w:footnoteReference"))
+        p._p.append(r)
         src = self.dir / "l.docx"
         d.save(src)
         notes = []

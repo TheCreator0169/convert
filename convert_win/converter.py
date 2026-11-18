@@ -38,7 +38,7 @@ def convert_file(src, fmt_id, options, trash_original=False, cancel=None, notes=
         dst = unique_path(src, fmt.ext)
         try:
             if kind in ("audio", "video"):
-                ffmpeg_conv.convert(src, dst, kind, fmt, opts, cancel)
+                warn = ffmpeg_conv.convert(src, dst, kind, fmt, opts, cancel)
             elif kind == "image":
                 warn = image_conv.convert(src, dst, fmt, opts)
             else:

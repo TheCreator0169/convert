@@ -1,5 +1,6 @@
 """Documents: TXT, MD, HTML, RTF, DOCX, ODT in; PDF, DOCX, ODT, RTF, TXT, HTML out. Qt's text engine is the hub."""
 import html
+import re
 from pathlib import Path
 
 from PySide6.QtCore import QMarginsF
@@ -47,30 +48,115 @@ def _read(path):
         return raw.decode("cp1252", "replace")
 
 
+HEADING = re.compile(r"^(?:heading|titre|überschrift|título|titolo)\s*([1-6])$", re.I)  # Word style names, English and localized
+IMG_TYPES = {"image/png", "image/jpeg", "image/gif", "image/bmp"}  # what Qt can draw; emf/wmf/svg are not carried over
+
+
 def _docx_html(path):
+    import base64
+
     import docx
-    from docx.table import Table
+    from docx.oxml.ns import qn
     from docx.text.paragraph import Paragraph
+    from docx.text.run import Run
 
     d = docx.Document(str(path))
+    numbering = d.part.numbering_part.element
 
-    def para(p):
-        body = "".join(
-            ("<b>" if r.bold else "") + ("<i>" if r.italic else "") + html.escape(r.text).replace("\n", "<br>")
-            + ("</i>" if r.italic else "") + ("</b>" if r.bold else "") for r in p.runs)
-        style = p.style.name if p.style is not None else ""
-        lvl = style.split()[-1] if style.startswith("Heading ") and style.split()[-1].isdigit() else None
-        return f"<h{lvl}>{body}</h{lvl}>" if lvl else f"<p>{body}</p>"
+    def run(r, p):
+        rn = Run(r, p)
+        s = html.escape(rn.text).replace("\n", "<br>")
+        for rid in r.xpath(".//a:blip/@r:embed"):
+            part = d.part.related_parts.get(rid)
+            if part is not None and part.content_type in IMG_TYPES:
+                cx, cy = (r.xpath(f"string(.//wp:extent/@{a})") for a in ("cx", "cy"))
+                size = f' width="{int(cx) // 9525}" height="{int(cy) // 9525}"' if cx.isdigit() and cy.isdigit() else ""
+                s += f'<img src="data:{part.content_type};base64,{base64.b64encode(part.blob).decode()}"{size}>'
+        return ("<b>" if rn.bold else "") + ("<i>" if rn.italic else "") + s + ("</i>" if rn.italic else "") + ("</b>" if rn.bold else "")
 
-    out = []
-    for el in d.element.body.iterchildren():
-        if el.tag.endswith("}p"):
-            out.append(para(Paragraph(el, d)))
-        elif el.tag.endswith("}tbl"):
-            rows = "".join("<tr>" + "".join(f"<td>{html.escape(c.text)}</td>" for c in r.cells) + "</tr>"
-                           for r in Table(el, d).rows)
-            out.append(f'<table border="1" cellspacing="0" cellpadding="4">{rows}</table>')
-    return "".join(out)
+    def inline(el, p):
+        out = []
+        for c in el.iterchildren():
+            if c.tag == qn("w:r"):
+                out.append(run(c, p))
+            elif c.tag == qn("w:hyperlink"):
+                rid = c.get(qn("r:id"))
+                href = d.part.rels[rid].target_ref if rid in d.part.rels else None
+                inner = inline(c, p)
+                out.append(f'<a href="{html.escape(href, quote=True)}">{inner}</a>' if href else inner)
+            elif c.tag in (qn("w:ins"), qn("w:smartTag"), qn("w:customXml"), qn("w:fldSimple")):
+                out.append(inline(c, p))
+            elif c.tag == qn("w:sdt"):  # content control: keep what is inside
+                content = c.find(qn("w:sdtContent"))
+                out.append(inline(content, p) if content is not None else "")
+        return "".join(out)
+
+    def list_kind(p, name):
+        ppr = p._p.pPr
+        num = ppr.numPr if ppr is not None else None
+        if num is not None and num.numId is not None and num.numId.val:
+            lvl = num.ilvl.val if num.ilvl is not None else 0
+            fmt = numbering.xpath(
+                f'w:abstractNum[@w:abstractNumId=../w:num[@w:numId="{num.numId.val}"]/w:abstractNumId/@w:val]'
+                f'/w:lvl[@w:ilvl="{lvl}"]/w:numFmt/@w:val')
+            return "ul" if fmt and fmt[0] == "bullet" else "ol"
+        return "ul" if name.startswith("List Bullet") else "ol" if name.startswith("List Number") else None
+
+    def para(el):  # (list tag or None, html)
+        p = Paragraph(el, d)
+        body = inline(el, p)
+        name = p.style.name if p.style is not None else ""
+        m = HEADING.match(name)
+        if m:
+            return None, f"<h{m[1]}>{body}</h{m[1]}>"
+        kind = list_kind(p, name)
+        return (kind, body) if kind else (None, f"<p>{body}</p>")
+
+    def items(children):
+        for el in children:
+            if el.tag == qn("w:p"):
+                yield para(el)
+            elif el.tag == qn("w:tbl"):
+                yield None, table(el)
+            elif el.tag == qn("w:sdt"):
+                content = el.find(qn("w:sdtContent"))
+                if content is not None:
+                    yield from items(content.iterchildren())
+
+    def join(children):  # consecutive list paragraphs share one <ul>/<ol>
+        out, cur = [], None
+        for kind, h in items(children):
+            if kind != cur:
+                out.append(f"</{cur}>" if cur else "")
+                out.append(f"<{kind}>" if kind else "")
+                cur = kind
+            out.append(f"<li>{h}</li>" if kind else h)
+        return "".join(out) + (f"</{cur}>" if cur else "")
+
+    def table(tbl):
+        rows, open_v = [], {}  # open_v: grid column -> the cell a vertical merge started in
+        for tr in tbl.findall(qn("w:tr")):
+            cells, col = [], 0
+            for tc in tr.findall(qn("w:tc")):
+                pr = tc.find(qn("w:tcPr"))
+                span = int(pr.xpath("string(w:gridSpan/@w:val)") or 1) if pr is not None else 1
+                vm = pr.find(qn("w:vMerge")) if pr is not None else None
+                if vm is not None and vm.get(qn("w:val")) in (None, "continue"):
+                    if col in open_v:
+                        open_v[col]["rows"] += 1
+                else:
+                    cell = {"html": join(tc.iterchildren()), "span": span, "rows": 1}
+                    cells.append(cell)
+                    if vm is not None:
+                        open_v[col] = cell
+                col += span
+            rows.append(cells)
+        body = "".join("<tr>" + "".join(
+            "<td" + (f' colspan="{c["span"]}"' if c["span"] > 1 else "") + (f' rowspan="{c["rows"]}"' if c["rows"] > 1 else "")
+            + f'>{c["html"]}</td>' for c in cells) + "</tr>" for cells in rows)
+        return f'<table border="1" cellspacing="0" cellpadding="4">{body}</table>'
+
+    return join(d.element.body.iterchildren())
 
 
 def _odt_text(path):
@@ -168,7 +254,7 @@ def _write_rtf(doc, dst):
 
 
 LOSSY_IN = {"rtf": "RTF formatting was dropped (text only)", "odt": "ODT styles and tables were dropped (text only)"}
-DOCX_DROPPED = ("<w:hyperlink", "<w:drawing", "<w:pict", "<w:sdt")  # parts the DOCX reader does not carry over
+DOCX_DROPPED = ("<w:pict", "<w:txbxContent", "<w:footnoteReference", "<w:endnoteReference", "<w:object")  # parts the DOCX reader skips
 
 
 def _docx_loses_content(path):
@@ -176,6 +262,8 @@ def _docx_loses_content(path):
 
     with zipfile.ZipFile(path) as z:
         xml = z.read("word/document.xml").decode("utf-8", "replace")
+        if any(n.lower().endswith((".emf", ".wmf", ".svg")) for n in z.namelist() if n.startswith("word/media/")):
+            return True
     return any(tag in xml for tag in DOCX_DROPPED)
 
 
@@ -201,5 +289,5 @@ def convert(src, dst, fmt, opts):
         Path(dst).write_text(doc.toPlainText(), "utf-8")
     ext = Path(src).suffix.lower().lstrip(".")
     if ext == "docx" and _docx_loses_content(src):
-        return "images, links or content controls were not carried over"
+        return "text boxes, footnotes, vector images or legacy objects were not carried over"
     return LOSSY_IN.get(ext)

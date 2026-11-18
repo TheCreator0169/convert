@@ -1,4 +1,5 @@
 """Audio and video through ffmpeg. build_args is pure so it can be tested without ffmpeg."""
+import re
 from functools import lru_cache
 
 from .process import find_tool, run
@@ -102,7 +103,21 @@ def build_args(ffmpeg, src, dst, kind, fmt, opts, have=frozenset()):
     return args + [dst]
 
 
+def _lost(ffmpeg, src, kind, fmt, opts):
+    """Warning for what the chosen arguments leave out: extra audio tracks (only 0:a:0 is mapped) and subtitles."""
+    # no output file: ffmpeg lists the streams on stderr and exits 1, which is fine here
+    _, _, err = run([ffmpeg, "-hide_banner", "-protocol_whitelist", "file", "-i", src])
+    n = {k: len(re.findall(rf"^\s+Stream #0:\d+\S*: {k}:", err, re.M)) for k in ("Audio", "Subtitle")}
+    out = []
+    if (kind == "audio" or (fmt.id != "gif" and opts["keep_audio"])) and n["Audio"] > 1:
+        out.append(f"{n['Audio']} audio tracks, only the first was kept")
+    if kind == "video" and fmt.id != "gif" and n["Subtitle"]:
+        out.append("subtitles were dropped")
+    return "; ".join(out) or None
+
+
 def convert(src, dst, kind, fmt, opts, cancel=None):
+    """Returns a warning string when audio tracks or subtitles were left out, else None."""
     ffmpeg = find_tool("ffmpeg")
     if not ffmpeg:
         raise RuntimeError("ffmpeg not found: install it (winget install Gyan.FFmpeg) and restart Convert")
@@ -110,3 +125,4 @@ def convert(src, dst, kind, fmt, opts, cancel=None):
     rc, _, err = run(build_args(ffmpeg, src, dst, kind, fmt, opts, have), cancel)
     if rc:
         raise RuntimeError(f"ffmpeg failed: {err.strip().splitlines()[-1] if err.strip() else rc}")
+    return _lost(ffmpeg, src, kind, fmt, opts)
