@@ -39,7 +39,7 @@ def draw(size=512):
     ImageDraw.Draw(mask).rounded_rectangle((0, 0, n - 1, n - 1), n // 5, fill=255)
 
     polys = _arrows(u)
-    off = 0.3 * u
+    off = 0.4 * u
     # glass copies: translucent fill, no outline, a faint soft shadow so they read as a pane
     shadow = _layer(n, polys, off, off + 0.15 * u, (10, 30, 100, 70)).filter(ImageFilter.GaussianBlur(0.18 * u))
     glass = _layer(n, polys, off, off, (255, 255, 255, 70))
