@@ -3,8 +3,29 @@ import html
 from pathlib import Path
 
 from PySide6.QtCore import QMarginsF
-from PySide6.QtGui import QPageLayout, QPageSize, QPdfWriter, QTextDocument, QTextDocumentWriter
+from PySide6.QtGui import QPageLayout, QPageSize, QPdfWriter, QTextCursor, QTextDocument, QTextDocumentWriter
 from PySide6.QtWidgets import QApplication
+
+
+def _strip_local_images(doc):
+    """Drop every image that is not an inline data: URI. An <img src="file:///..."> in an untrusted HTML or Markdown
+    file would otherwise pull a local file into the output (Qt's image handler reads local files by itself)."""
+    spans = []
+    b = doc.begin()
+    while b.isValid():
+        it = b.begin()
+        while not it.atEnd():
+            f = it.fragment()
+            cf = f.charFormat()
+            if cf.isImageFormat() and not cf.toImageFormat().name().startswith("data:"):
+                spans.append((f.position(), f.length()))
+            it += 1
+        b = b.next()
+    for pos, length in reversed(spans):
+        cur = QTextCursor(doc)
+        cur.setPosition(pos)
+        cur.setPosition(pos + length, QTextCursor.KeepAnchor)
+        cur.removeSelectedText()
 
 
 def _read(path):
@@ -85,6 +106,7 @@ def load(path):
         doc.setPlainText(_odt_text(path))  # shortcut: ODT keeps text only (no styles, tables as lines)
     else:
         doc.setPlainText(_read(path))
+    _strip_local_images(doc)
     return doc
 
 

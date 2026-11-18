@@ -90,12 +90,17 @@ def option_key(kind, fmt_id):
 
 
 def unique_path(src, ext, tag=""):
-    """Beside the original, never overwriting: name.ext, name 2.ext, name 3.ext."""
+    """Beside the original, never overwriting: name.ext, name 2.ext, name 3.ext.
+    The name is reserved by creating an empty file (exclusive create): two processes cannot pick the same name, and a
+    dangling link is never followed. The caller writes into it, or deletes it on failure."""
     src = Path(src)
     stem = f"{src.stem}{tag}"
     out = src.with_name(f"{stem}.{ext}")
     n = 2
-    while out.exists():
-        out = src.with_name(f"{stem} {n}.{ext}")
-        n += 1
-    return out
+    while True:
+        try:
+            with open(out, "xb"):
+                return out
+        except FileExistsError:
+            out = src.with_name(f"{stem} {n}.{ext}")
+            n += 1

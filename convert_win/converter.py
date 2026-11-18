@@ -1,5 +1,6 @@
 """One entry point: convert a file to a format id, return the files written."""
 import logging
+import os
 from pathlib import Path
 
 from send2trash import send2trash
@@ -15,7 +16,9 @@ def convert_file(src, fmt_id, options, trash_original=False, cancel=None, notes=
     """`options` maps option group (audio, video, gif, image, doc, pdf) to its dict. Raises on failure.
     Warnings go to the `notes` list. The original is trashed only when the output is complete (no warning)."""
     notes = [] if notes is None else notes
-    src = Path(src)
+    src = Path(os.path.abspath(src))  # absolute: a name starting with "-" or a "scheme:" prefix is never read as an option or URL
+    if not src.is_file():
+        raise FileNotFoundError(f"not a file: {src.name}")
     kind, fmt = output_fmt(src, fmt_id)
     opts = options[option_key(kind, fmt_id)]
     log.info("convert %s -> %s", src.name, fmt_id)

@@ -22,6 +22,7 @@ from .version import CONVERT_VERSION
 
 log = logging.getLogger("convert")
 PIPE = f"Convert-GUI-{getpass.getuser()}"
+MAX_MESSAGE = 1 << 20  # bytes accepted on the pipe
 CHOICES = {"video_quality": ["high", "medium", "low"], "page": ["A4", "Letter"], "height": [0, 2160, 1440, 1080, 720, 480],
            "channels": [0, 1, 2], "bit_depth": [16, 24], "dpi": [72, 150, 300],
            "sample_rate": [0, 22050, 44100, 48000]}
@@ -330,19 +331,29 @@ def run(files):
     app.setStyleSheet(theme.stylesheet())
     QLocalServer.removeServer(PIPE)  # stale pipe name after a crash
     server = QLocalServer()
-    server.listen(PIPE)  # before the window exists, so the others can connect while it builds
+    server.setSocketOptions(QLocalServer.UserAccessOption)  # only this Windows user may connect
+    if not server.listen(PIPE):  # before the window exists, so the others can connect while it builds
+        log.warning("single-instance pipe not available: %s", server.errorString())
     win = Window()
 
     def on_connection():
         c = server.nextPendingConnection()
         buf = bytearray()
-        c.readyRead.connect(lambda: buf.extend(c.readAll().data()))
+
+        def read():
+            buf.extend(c.readAll().data())
+            if len(buf) > MAX_MESSAGE:  # a list of file names is never this big: drop the peer
+                c.abort()
+
+        c.readyRead.connect(read)
 
         def finish():
             buf.extend(c.readAll().data())
+            if len(buf) > MAX_MESSAGE:
+                return
             try:
                 paths = json.loads(buf.decode())
-            except ValueError:
+            except (ValueError, RecursionError):  # bad JSON, or nested so deep that parsing overflows
                 return
             if isinstance(paths, list):
                 win.add_files(p for p in paths if isinstance(p, str))  # add_files keeps only real, supported files

@@ -1,4 +1,5 @@
 """The only place that starts a subprocess: no console window, cancellable."""
+import os
 import shutil
 import subprocess
 import sys
@@ -18,7 +19,10 @@ def find_tool(name):
         local = Path(sys.executable).with_name(f"{name}.exe")
         if local.exists():
             return str(local)
-    return shutil.which(name)
+    # shutil.which(name) alone searches the current folder first on Windows: a planted ffmpeg.exe beside the user's files
+    # would run. Search PATH only, and only absolute entries.
+    dirs = [d.strip('"') for d in os.environ.get("PATH", "").split(os.pathsep)]
+    return shutil.which(name, path=os.pathsep.join(d for d in dirs if d and os.path.isabs(d)))
 
 
 def run(args, cancel=None):

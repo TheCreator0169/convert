@@ -5,6 +5,10 @@ from .formats import unique_path
 from .process import Cancelled
 
 
+MAX_PAGES = 500
+MAX_PIXELS = 100_000_000  # per page: about 400 MB of RGB
+
+
 def convert(src, fmt, opts, cancel=None):
     """Returns (files written, warning or None); removes partial output on any failure."""
     outs, warn = [], None
@@ -25,10 +29,15 @@ def convert(src, fmt, opts, cancel=None):
                 outs.append(dst)
                 dst.write_text("\n\n".join(texts), "utf-8")
             else:
+                if doc.page_count > MAX_PAGES:
+                    raise RuntimeError(f"{doc.page_count} pages: more than the {MAX_PAGES} page limit for images")
                 pad = len(str(doc.page_count))
+                scale = opts["dpi"] / 72
                 for n, page in enumerate(doc, 1):
                     if cancel is not None and cancel.is_set():
                         raise Cancelled()
+                    if page.rect.width * page.rect.height * scale * scale > MAX_PIXELS:
+                        raise RuntimeError(f"page {n} is too large at {opts['dpi']} dpi: lower the resolution")
                     dst = unique_path(src, fmt.ext, f" p{n:0{pad}d}")
                     outs.append(dst)
                     page.get_pixmap(dpi=opts["dpi"]).save(dst)

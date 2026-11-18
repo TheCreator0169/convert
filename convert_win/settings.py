@@ -3,10 +3,14 @@ import json
 import logging
 import os
 import sys
+import time
 from datetime import date
 from pathlib import Path
 
 from .formats import DEFAULTS
+
+
+LOG_DAYS = 14
 
 
 def _dir(var):
@@ -45,6 +49,17 @@ def save(settings):
     (_dir("APPDATA") / "settings.json").write_text(json.dumps(settings, indent=2), "utf-8")
 
 
+def prune_logs(logs, days=LOG_DAYS):
+    """Retention: delete logs older than `days` (they hold file names)."""
+    cutoff = time.time() - days * 86400
+    for old in logs.glob("convert_*.log"):
+        try:
+            if old.stat().st_mtime < cutoff:
+                old.unlink()
+        except OSError:
+            pass
+
+
 def setup_logging():
     log = logging.getLogger("convert")
     if not log.handlers:
@@ -55,4 +70,5 @@ def setup_logging():
         log.addHandler(h)
         log.setLevel(logging.INFO)
         log.info("Frozen: %s", getattr(sys, "frozen", False))
+        prune_logs(logs)
     return log

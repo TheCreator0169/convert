@@ -68,7 +68,8 @@ def _audio_args(fmt, o):
 
 def build_args(ffmpeg, src, dst, kind, fmt, opts, have=frozenset()):
     """Argument list for one conversion. kind is "audio" or "video"; opts is the option dict for it."""
-    head = [ffmpeg, "-y", "-v", "error", "-nostdin", "-i", src]
+    # -protocol_whitelist file: a path that looks like a URL must never make ffmpeg touch the network
+    head = [ffmpeg, "-y", "-v", "error", "-nostdin", "-protocol_whitelist", "file", "-i", src]
     if kind == "audio":
         return head + ["-vn", "-map", "0:a:0", "-map_metadata", "0"] + _audio_args(fmt, opts) + [dst]
     if fmt.id == "gif":

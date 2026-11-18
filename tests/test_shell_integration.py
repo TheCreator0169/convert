@@ -46,6 +46,21 @@ class ShellIntegration(unittest.TestCase):
         self.assertFalse(exists(si._verb(TEST_BASE, "mp3")))
         winreg.DeleteKey(winreg.HKEY_CURRENT_USER, other)
 
+    def test_uninstall_keeps_an_extension_key_that_has_a_value(self):  # H8
+        si.install(TEST_BASE, cmd="c", icon="i")
+        ext_key = TEST_BASE + r"\SystemFileAssociations\.mp3"
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, ext_key, 0, winreg.KEY_WRITE) as k:
+            winreg.SetValueEx(k, "PerceivedType", 0, winreg.REG_SZ, "audio")
+        si.uninstall(TEST_BASE)
+        self.assertTrue(exists(ext_key))
+        winreg.DeleteValue(winreg.OpenKey(winreg.HKEY_CURRENT_USER, ext_key, 0, winreg.KEY_WRITE), "PerceivedType")
+        si._delete(ext_key)
+
+    def test_uninstall_removes_the_empty_container(self):  # H8
+        si.install(TEST_BASE, cmd="c", icon="i")
+        si.uninstall(TEST_BASE)
+        self.assertFalse(exists(TEST_BASE + r"\SystemFileAssociations"))
+
     def test_uninstall_twice_is_harmless(self):
         si.uninstall(TEST_BASE)
         si.uninstall(TEST_BASE)

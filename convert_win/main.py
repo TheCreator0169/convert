@@ -28,7 +28,7 @@ def cli(argv):
             for n in notes:
                 print(f"warning: {n}", file=sys.stderr)
         except Exception as e:  # report each file, keep going
-            settings.setup_logging().exception("failed %s", f)
+            settings.setup_logging().exception("failed %s", Path(f).name)
             print(f"{f}: {e}", file=sys.stderr)
             code = 1
     return code

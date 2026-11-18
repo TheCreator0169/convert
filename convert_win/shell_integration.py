@@ -45,14 +45,26 @@ def _delete(path):
         return False
 
 
+def _delete_if_empty(path):
+    """DeleteKey also removes a key that holds values: check for both subkeys and values first."""
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, path) as k:
+            subkeys, values, _ = winreg.QueryInfoKey(k)
+    except OSError:
+        return
+    if not subkeys and not values:
+        _delete(path)
+
+
 def uninstall(base=BASE):
-    """Removes only what install wrote; shell/.ext containers go only if they ended up empty."""
+    """Removes only what install wrote; the shell, .ext and SystemFileAssociations containers go only if empty."""
     for ext in EXT_TYPE:
         verb = _verb(base, ext)
         _delete(verb + r"\command")
         if _delete(verb):
-            _delete(verb.rsplit("\\", 1)[0])
-            _delete(verb.rsplit("\\", 2)[0])
+            _delete_if_empty(verb.rsplit("\\", 1)[0])
+            _delete_if_empty(verb.rsplit("\\", 2)[0])
+    _delete_if_empty(rf"{base}\SystemFileAssociations")
     _notify()
 
 
