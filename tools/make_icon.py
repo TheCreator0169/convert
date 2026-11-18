@@ -11,8 +11,8 @@ SS = 2  # supersampling for smooth edges
 
 def _arrows(u):
     """Right-pointing arrow on top, left-pointing below; polygons in pixels (u = 1/10 of the icon)."""
-    right = [(2.4, 3.3), (6.0, 3.3), (6.0, 2.5), (7.8, 3.7), (6.0, 4.9), (6.0, 4.1), (2.4, 4.1)]
-    left = [(7.6, 5.9), (4.0, 5.9), (4.0, 5.1), (2.2, 6.3), (4.0, 7.5), (4.0, 6.7), (7.6, 6.7)]
+    right = [(2.4, 3.35), (6.0, 3.35), (6.0, 2.55), (7.8, 3.75), (6.0, 4.95), (6.0, 4.15), (2.4, 4.15)]
+    left = [(7.6, 5.85), (4.0, 5.85), (4.0, 5.05), (2.2, 6.25), (4.0, 7.45), (4.0, 6.65), (7.6, 6.65)]
     return [[(x * u, y * u) for x, y in a] for a in (right, left)]
 
 
@@ -39,7 +39,7 @@ def draw(size=512):
     ImageDraw.Draw(mask).rounded_rectangle((0, 0, n - 1, n - 1), n // 5, fill=255)
 
     polys = _arrows(u)
-    off = 0.4 * u
+    off = 0.2 * u
     # glass copies: translucent fill, no outline, a faint soft shadow so they read as a pane
     shadow = _layer(n, polys, off, off + 0.15 * u, (10, 30, 100, 70)).filter(ImageFilter.GaussianBlur(0.18 * u))
     glass = _layer(n, polys, off, off, (255, 255, 255, 70))
