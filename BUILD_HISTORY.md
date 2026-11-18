@@ -52,12 +52,13 @@ Contents: DOCX reader keeps links, content controls, pictures, lists, nested and
 ## v0.1.4 (2026-11-18, not tagged, not published)
 
 Contents: DOCX writer keeps lists, tables (merged, nested), links and pictures; DOCX reader lists footnotes and keeps nested list levels; ODT and RTF read with structure by own parsers (odfpy and striprtf removed from `requirements.txt`); PDF drawn page by page without Qt's page number, with the requested 15 mm margins (side margins narrower than before).
-- `build.ps1 v0.1.4` at commit `f7a646e` (feature commit `b02f79c`): PyInstaller one-folder + Inno Setup.
-  - `Convert.exe` sha256 `d6830b6190d6bb2fe570b77ead98352a025f0090d0d4f63542c1ae6d831d3bd6`
-  - `Convert-Setup-v0.1.4.exe` sha256 `cf7c6a7e00978c7e02bfa910a7c636a8971105f85dade0e63dbd493e7fd65700`
+- `build.ps1 v0.1.4` at commit `6dd4e9b` (feature commit `b02f79c`, fix `da0eb63`); rebuilt once, the first build (`f7a646e`) is under `archives\`: PyInstaller one-folder + Inno Setup.
+  - `Convert.exe` sha256 `fd9ef27113af5fa7994819a1e6d76c256194d9049af9c518a5e180b02e642320`
+  - `Convert-Setup-v0.1.4.exe` sha256 `5cf02e8ef7276dc5981ad97095ccb6050c5db56f5159e1f8e89cf7990c9c9599`
   - Properties > Details read back on both files: version 0.1.4, copyright "Copyright (c) 2026 TheCreator0169. MIT License."
-- Source tests: 121, 1 skipped, all pass, with ffmpeg on the PATH.
+- Source tests: 123, 1 skipped, all pass on three runs after the fix (one earlier run showed 2 failures that did not come back and were not identified), with ffmpeg on the PATH.
 - Frozen `--cli` in a temp profile: French DOCX to PDF (text, 1 image, 1 link, black text present) and to DOCX (Heading 1, bullet, 1 table, 1 picture, 1 hyperlink); hand-made ODT to PDF and RTF to PDF (text found, black text present). No Convert process left.
+- Found by the user's test file (`Lorem ipsum.docx`, no numbering part): every DOCX without `word/numbering.xml` failed with an empty error since v0.1.3 (python-docx raises NotImplementedError). Fixed, regression test added, errors without a message now show the exception name. The published v0.1.3 setup has this bug. Frozen retest on a copy of that file: PDF, ODT, RTF, HTML, TXT all written, no page number, left margin 46 pt.
 - Found while testing: Qt's `drawContents` drew white text in Windows dark mode (fixed with an explicit palette, pixel test added); an ODT zip handle left open (fixed with a `with` block).
 - Not verified: install, right-click and uninstall with this installer, DOCX/ODT/RTF files made by Word or LibreOffice, the PDF and DOCX output by eye (one rendered PDF page was looked at), hardware encoders, SmartScreen (not signed).
 
