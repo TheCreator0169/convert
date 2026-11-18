@@ -8,3 +8,4 @@ archives/
 .env
 .env.*
 Convert.spec
+.claude/
