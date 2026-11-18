@@ -84,3 +84,13 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 - Tests in source mode: 147, 1 skipped, all pass, ffmpeg on the PATH, not under `QT_QPA_PLATFORM=offscreen` (PDF text is empty there).
 - Frozen `--cli` in a temp profile on a 2-audio-track MKV: mp3, mp4, mp4-hevc (output checked: hevc + aac) and wma all exit 0; runtime log has no errors; no Convert process left.
 - Not verified: the new options in the frozen window, subtitles in the frozen build, hardware encoders, install, right-click and uninstall with this installer, SmartScreen (not signed).
+
+## v0.1.7 (2026-11-19, not tagged, not published)
+
+- Commit `85397d5` (feature), then the history commit. Built with `build.ps1 v0.1.7`, which now runs `tools/smoke_frozen.py` before the installer is made.
+- Convert.exe sha256 `64655a85796d2771e57cce3753779b43e2af060183bc0d57e79a499b274395ae`.
+- Convert-Setup-v0.1.7.exe sha256 `a187c7cb0459f0ee5b81fb701613ef13f3691506e5314b42503887cf2d9e0fbb`.
+- New: `tests/test_coverage_gaps.py`, the frozen smoke test in the build, `.github/workflows/tests.yml` and README badge, software fallback when a hardware encoder refuses a video (NVENC and a 96x64 clip: found by the smoke test).
+- Tests in source mode: 164, 1 skipped, all pass, ffmpeg on the PATH.
+- Frozen smoke test (inside the build, temp profile): image to WebP, txt to PDF, md to DOCX, DOCX to PDF, PDF to PNG and TXT, MP4 to MP3, MKV and GIF all exit 0 with a non-empty output; runtime log frozen and free of errors.
+- Not verified: the CI on GitHub (never run; `test_single_instance` may fail on the runner), H9 hashes (needs pip-tools), the window, install, right-click and uninstall with this installer, SmartScreen (not signed).
