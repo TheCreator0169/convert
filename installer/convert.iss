@@ -7,6 +7,12 @@
 AppId={{7D3B1C52-9A4E-4F0B-8E21-5C6A0D94B7F3}
 AppName=Convert
 AppVersion={#AppVersion}
+AppPublisher=TheCreator0169
+AppCopyright=Copyright (c) 2026 TheCreator0169. MIT License.
+VersionInfoVersion={#AppVersion}
+VersionInfoCopyright=Copyright (c) 2026 TheCreator0169. MIT License.
+VersionInfoProductName=Convert
+VersionInfoDescription=Convert for Windows setup
 DefaultDirName={localappdata}\Programs\Convert
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
