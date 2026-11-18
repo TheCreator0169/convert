@@ -7,8 +7,8 @@ Build details (hashes, archives) live in `BUILD_HISTORY.md`; do not copy them he
 
 **v0.1.0 built (2026-11-18), nothing committed or tagged.** Core converters, CLI, PySide6 window, Explorer menu code, `build.ps1`
 and `installer\convert.iss` exist. Image, document and PDF conversions are verified in source and frozen. ffmpeg and Inno Setup are installed (user's OK); real audio/video tests pass in source and frozen; `Convert-Setup-v0.1.0.exe` is built.
-The install, upgrade and uninstall round trip was run on this PC with the user's OK (clean, see `BUILD_HISTORY.md`); the app is
-currently uninstalled. The window and the real Explorer right-click have not been looked at by the user yet. Not committed.
+Installed on the user's PC; the real right-click entry works and a .jpg to .webp conversion was confirmed by the user. The real-registry uninstall
+and reinstall round trip is clean (`BUILD_HISTORY.md`). Open: the copyright holder name in `LICENSE`; the real hardware encoders were not tested.
 
 ## Done
 
