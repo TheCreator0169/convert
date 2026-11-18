@@ -15,6 +15,8 @@ One entry per gotcha: symptom, cause, fix or status.
 
 ## Gotchas (keep in mind)
 
+- **Explorer caches context-menu verbs per file type** (2026-11-18): after the first install the entry was missing on a `.gif` in an already-open Explorer, although the shell API (`Shell.Application` `Verbs()`) in a fresh process listed it. `shell_integration` now sends `SHChangeNotify(SHCNE_ASSOCCHANGED)` after install and uninstall. Whether that was the cause is not confirmed until the user sees the entry.
+
 - **Qt offscreen has no fonts**: a PDF written under `QT_QPA_PLATFORM=offscreen` has no text. `test_ui_smoke` sets it in `setUpModule`, not at import. Document code must create `QApplication`, not `QGuiApplication`, or the window tests crash (exit 0xC0000409) when run in the same process.
 
 - Python 3.14 is the default here; native packages (PyMuPDF, pillow-heif) may lack wheels. Use `py -3.13`.

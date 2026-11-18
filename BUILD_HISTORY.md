@@ -2,9 +2,10 @@
 
 ## v0.1.0 (2026-11-18, not tagged, not committed)
 
-- Final `build.ps1 v0.1.0`: PyInstaller one-folder + Inno Setup 6.7.3.
-  - `Convert.exe` sha256 `a3da0c85534a257f7a5e7903b43df9387a305694a9363b06ad2afecdf585674f`
-  - `Convert-Setup-v0.1.0.exe` sha256 `ddc3835cf07a619682d399bb0e2f0f28ef58090c4c40034e2a9c9f43aea690be`
+- Final `build.ps1 v0.1.0` (after the Explorer-notify fix, commit `28479d6`): PyInstaller one-folder + Inno Setup 6.7.3.
+  - `Convert.exe` sha256 `1d7d231b36f669005ca20a5add729021ae07ebd38952849c767828437b762061`
+  - `Convert-Setup-v0.1.0.exe` sha256 `555c0a8ad31e5c821b56cb09575a2c9ecb51458a164b324defb119cf0a54c69c`
+  - The round-trip checks below were done on the previous build (same installer script, no menu-notify call).
   - Earlier builds of the same version are under `archives\`.
 - Source tests: 60 (54 with ffmpeg off the PATH, 6 media tests skipped then), all pass, 9 suites.
 - Frozen, `--cli`: image, document and PDF families, wav to mp3/flac, mp4 to mp4/webm/gif/mp3, all written, no Traceback.
