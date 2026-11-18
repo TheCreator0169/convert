@@ -62,7 +62,7 @@ Contents: DOCX writer keeps lists, tables (merged, nested), links and pictures; 
 - Found while testing: Qt's `drawContents` drew white text in Windows dark mode (fixed with an explicit palette, pixel test added); an ODT zip handle left open (fixed with a `with` block).
 - Not verified: install, right-click and uninstall with this installer, DOCX/ODT/RTF files made by Word or LibreOffice, the PDF and DOCX output by eye (one rendered PDF page was looked at), hardware encoders, SmartScreen (not signed).
 
-## v0.1.5 (2026-11-18, not tagged, not published)
+## v0.1.5 (2026-11-18, published)
 
 Contents: cancel stops image jobs between frames and document jobs between pages; animations above 500 frames or 400 million pixels are refused for multi-frame targets; failed files are listed one per line (selectable, wrapped); "Open log folder" button; "Cancelling..." message.
 - `build.ps1 v0.1.5` at commit `6a036b1` (feature commit `368ea83`): PyInstaller one-folder + Inno Setup.
@@ -74,3 +74,13 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 - Frozen `--cli` in a temp profile: a 600-frame GIF to PDF is refused (exit 1, log says "animation too large"), a 6-frame GIF to WebP is written. No Convert process left.
 - Not verified: Cancel and the error list in the frozen window (no GUI automation here: the user's test), install, right-click and uninstall with this installer, hardware encoders, SmartScreen (not signed).
 
+
+## v0.1.6 (2026-11-18, not tagged, not published)
+
+- Commit `c8189db` (feature) plus this history commit. Built with `build.ps1 v0.1.6`.
+- Convert.exe sha256 `a66a25c4bab83be2fe8960f31eec54a9fc92f6627f721d03c4946b064489e7f2`.
+- Convert-Setup-v0.1.6.exe sha256 `4a357df5f071921fa3b901caa7918d11a4536e5ae4c26fb7389a29bf8394c8a5`.
+- New: "Audio track" (1-4) and "Keep subtitles" options, error for a missing track, picture-subtitle warning, `tests/test_encoders.py` (every audio id and video format converted for real).
+- Tests in source mode: 145, 1 skipped, all pass, ffmpeg on the PATH, not under `QT_QPA_PLATFORM=offscreen` (PDF text is empty there).
+- Frozen `--cli` in a temp profile on a 2-audio-track MKV: mp3, mp4, mp4-hevc (output checked: hevc + aac) and wma all exit 0; runtime log has no errors; no Convert process left.
+- Not verified: the new options in the frozen window, subtitles in the frozen build, hardware encoders, install, right-click and uninstall with this installer, SmartScreen (not signed).
