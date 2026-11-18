@@ -10,6 +10,9 @@ and `installer\convert.iss` exist. Image, document and PDF conversions are verif
 Installed on the user's PC; the real right-click entry works and a .jpg to .webp conversion was confirmed by the user. The real-registry uninstall
 and reinstall round trip is clean (`BUILD_HISTORY.md`). Open: the copyright holder name in `LICENSE`; the real hardware encoders were not tested.
 
+**Next: the plan in `docs\ROADMAP.md` (v0.1.1 safety, v0.1.2 security, v0.1.3 documents, v0.2.0 window, v0.3.0 installer, v0.4.0 tests/CI).**
+Four Haiku agents (scout x2, reviewer, security-auditor) produced it on 2026-11-18; Sonnet reproduced S1-S6 and the settings crash. Seven decisions (D1-D7) wait for the user.
+
 ## Done
 
 - Omega structure (`.claude\`: 8 Haiku agents, 7 skills, settings; `CLAUDE.md`; `docs\`).

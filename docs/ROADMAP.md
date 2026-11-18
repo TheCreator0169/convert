@@ -1,66 +1,121 @@
 # Convert for Windows: roadmap
 
-Written 2026-11-18. Goal in one sentence: right-click one or more files in Explorer, choose **Convert**, pick a
-format, and the file is converted next to the original, fully local, installed by one `Convert-Setup-vX.Y.Z.exe`.
+Status 2026-11-18: **v0.1.0 works and is public** (`github.com/TheCreator0169/convert`, MIT). Window, right-click menu,
+installer, audio/video/image/document/PDF conversion, install and uninstall checked on the real PC.
+This file plans what comes next. Nothing below is started.
 
-Reference: the macOS app `newtonstudios/convert` (read only, not copied). Same features, Windows engines. No website,
-no server, no analytics, no network code.
+Goal stays the same: right-click a file, choose Convert, done. 100 % local, no account, no telemetry.
 
-## Scope
+## How each version is built (same loop every time)
 
-| macOS original | Windows version |
-|---|---|
-| SwiftUI | Python 3.13 + PySide6 |
-| Finder Quick Action | Explorer verb in `HKCU\Software\Classes\SystemFileAssociations\<ext>\shell\Convert` (no admin) |
-| ffmpeg + VideoToolbox | ffmpeg with NVENC, QSV or AMF when present, else software |
-| ImageIO + cwebp | Pillow, `pillow-heif`, `pillow-avif-plugin` |
-| textutil + AppKit | `python-docx`, `striprtf`, `odfpy`, built-in Markdown to HTML, PDF through Qt |
-| PDFKit / Core Graphics | PyMuPDF |
-| Trash | `send2trash` (Recycle Bin) |
-| `build.sh` | `build.ps1`: PyInstaller (one-folder) then Inno Setup |
+1. **scout** (read-only) maps the files the item touches.
+2. **tester** writes the test first; it must fail without the fix.
+3. **builder** (or **ui-designer** for the window) makes the smallest change, one item per brief, writers never share a file.
+4. **reviewer** reads the diff; Sonnet re-checks every report itself (counts, cited lines, a re-run).
+5. All suites green, then local commit. **security-auditor** re-audits after v0.1.2. **windows-builder** builds and smoke-tests the frozen exe.
+6. Push and release only on the user's word. Escalation: Haiku x3, Sonnet, Opus 5.5 medium for a blocker only.
 
-Formats (same table as the original): audio (MP3, M4A, WAV, AIFF, FLAC, ALAC, Opus, OGG, WMA, AC3, WavPack, MP2),
-video (MP4 H.264/HEVC/AV1, MOV ProRes, WebM VP9, MKV, GIF, or audio only), images (JPEG, PNG, HEIC, AVIF, WebP, TIFF,
-GIF, BMP, PDF), documents (PDF, DOCX, ODT, RTF, TXT, HTML), PDF to PNG/JPEG/TXT.
-Advanced options per format, remembered in `%APPDATA%\Convert\settings.json`.
+Evidence labels: **reproduced** = Sonnet ran it and saw the failure; **read** = an agent read the code, not run yet.
 
-Not in scope: the website, Excel/PowerPoint, legacy `.doc` (needs LibreOffice; listed in known-issues), code signing,
-auto-update, any network call.
+## Decisions needed from the user
 
-## Known platform limit (decide with the user before v0.3.0)
+| # | Question | Default if no answer |
+|---|---|---|
+| D1 | Publish v0.1.0 as a GitHub Release now, or wait for v0.1.1 (safety fixes)? | Wait for v0.1.1 |
+| D2 | Optional "check for a newer version" (one request to GitHub, off by default, opens the download page, installs nothing)? | Not built; updates stay manual (run the new setup over the old one) |
+| D3 | Bundle ffmpeg in the installer (GPL build, +80 MB) or keep it external with a hint? | External |
+| D4 | Code signing (paid certificate) so SmartScreen does not warn? | No signing, README says so |
+| D5 | Light theme and "follow Windows"? | Yes, follow Windows |
+| D6 | GitHub Actions CI on every push (needs a token that may push workflow files)? | Yes, if the login allows it |
+| D7 | Delete the old local reflog entries that still hold your personal email (`git reflog expire` + `gc`)? | Ask first |
 
-Windows 11 puts registry verbs in the classic menu ("Show more options" or Shift+F10), not in the short top menu.
-Top-level placement needs a signed sparse MSIX package with a COM `IExplorerCommand`; that is a separate mission.
-v0.3.0 ships the registry verb and says so in the README.
+## v0.1.1: safety fixes (no visible change). Release candidate #1
 
-## Gates (every version)
+Rule: **an original is never sent to the Recycle Bin unless the output is complete and correct.**
 
-1. Tracked tree clean, all test suites green before and after (see `convert-testing`). A bug fixed = a test that fails without the fix.
-2. `reviewer` on the diff before the commit.
-3. Visible change: user's OK on the element list before editing (`CLAUDE.md`).
-4. Frozen build checked, not only source (`convert-build`).
-5. `BUILD_HISTORY.md` entry, `docs/` updated, local commit. Tag only when the user says so.
-6. Explorer menu and the window are validated by the user's eye.
+| ID | Problem | Evidence | Where | Fix | Agent |
+|---|---|---|---|---|---|
+| S1 | Scanned PDF to TXT writes an empty file, reports success, trashes the PDF | reproduced | converter.py:19-20, pdf_conv.py:13-16 | PDF branch goes through the same checks: no outputs or a 0-byte output raises "no text found (scanned PDF?)", partial files removed, no trash | tester, builder |
+| S2 | Multi-page TIFF to PDF keeps page 1 only; animated GIF/WebP keep frame 1; original trashed | reproduced (3 pages gave 1) | image_conv.py:15-17 | `save_all` for multi-frame inputs to PDF/TIFF/GIF/WebP; otherwise warn and do not trash | tester, builder |
+| S3 | Camera photos come out sideways, EXIF date and GPS lost | reproduced (orientation) | image_conv.py:14-28 | `ImageOps.exif_transpose`, pass `exif` and `icc_profile` | tester, builder |
+| S4 | Recycle Bin fails after a good conversion: file counted as failed though the output exists | reproduced | converter.py:36-37, ui.py:60-62 | catch it, report "converted, but the original could not be moved" | tester, builder |
+| S5 | `settings.json` not an object (`[]`) crashes the window at start; UTF-8 BOM resets everything; `"false"` string turns trashing ON; wrong-type or unknown option crashes the window or makes every video fail | reproduced (crash, BOM, "false", wrong type kept); read (RANGE KeyError) | settings.py:20-24, ui.py:187-203, ffmpeg_conv.py:84,94 | `load()` reads `utf-8-sig`, checks types at each level, keeps only keys of DEFAULTS, coerces to the default's type, `trash_originals is True`; `save()` guarded with a visible message | tester, builder |
+| S6 | UTF-16 text file becomes mojibake, then is trashed | reproduced | doc_conv.py:10-15 | BOM check first (UTF-16/32), then UTF-8, then cp1252 | tester, builder |
+| S7 | RTF and ODT are read as text only, the message says "Done" | read | doc_conv.py:70,74, ui.py:253 | warning line for RTF/ODT sources, never trash them automatically | builder |
+| S8 | Files added while a batch runs are dropped silently (right-click in Explorer, drop) | read | ui.py:125-126 | queue them and add when the batch ends, with a message | tester, builder |
+| S9 | Cancel does nothing for image, document and PDF jobs; PDF failure at page 7 leaves pages 1-6; closing the window can abort the Qt thread | read | converter.py:20, pdf_conv.py:17-22, ui.py:266-270 | pass `cancel` through, check per page, unlink partial outputs, wait for the worker before closing | tester, builder |
+| S10 | "Cancelled." shown when Cancel was pressed during the last file; "Converting..." keeps the previous green/red colour | read | ui.py:250-251, 225-230 | decide from real results; re-polish the label | builder |
+| S11 | GIF frame rate can be set to 0 | read | ui.py:27, ffmpeg_conv.py:75 | minimum 1 for the GIF group | builder |
 
-## v0.1.0 Core and CLI (no window)
+Done when: every ID has a test that failed before; 60+ tests green; frozen exe re-checked on S1-S4; reviewer reports no data-loss finding.
 
-- `formats.py` (detect type, output formats, options), `process.py` (subprocess with CREATE_NO_WINDOW, cancel), `ffmpeg_conv.py`,
-  `image_conv.py`, `doc_conv.py`, `pdf_conv.py`, `converter.py`, `main.py --cli`. (No `markdown_html.py`: Qt's `QTextDocument.setMarkdown` does it.)
-- Output beside the original, numbered if the name exists, never overwritten.
-- Done when: `main.py --cli mp3 song.opus` writes a playable file; every format family has a real conversion test.
+## v0.1.2: security hardening
 
-## v0.2.0 Window
+| ID | Problem | Evidence | Where | Fix | Agent |
+|---|---|---|---|---|---|
+| H1 | `shutil.which` looks in the current folder first on Windows: a planted `ffmpeg.exe` next to your files could run | agent reproduced it; Explorer's working folder not checked | process.py:15-21 | walk `PATH` yourself, skip empty and relative entries; test with a planted exe | tester, builder |
+| H2 | The single-instance pipe: default permissions unverified, `listen()` result ignored, no size cap, `RecursionError` escapes on deep JSON | read | ui.py:23,307-321 | `UserAccessOption`, check `listen()`, 1 MB cap, catch `Exception` | tester, builder |
+| H3 | `--cli` takes URLs (ffmpeg would fetch them: breaks "no network"); relative names starting with `-` fail | read | main.py:19-25, ffmpeg_conv.py:71 | absolute paths, `is_file()`, `-protocol_whitelist file` | tester, builder |
+| H4 | `unique_path` follows dangling links and `-y` overwrites; two CLI processes can pick the same name | read | formats.py:96-101 | `lexists`, exclusive create, `-n` | tester, builder |
+| H5 | PDF to images has no limit on pixels or pages | read | pdf_conv.py:17-21 | cap pixels per page and page count, clear message | builder |
+| H6 | HTML/Markdown with `<img src=file:///...>` may embed local files in the output | not tested | doc_conv.py:64-67 | test it, then turn resource loading off | tester, builder |
+| H7 | Logs hold full file paths, no retention | read | converter.py:18, ui.py:61, settings.py:31-41 | log file names only, keep 14 days | builder |
+| H8 | Uninstall leaves the empty `SystemFileAssociations` key, and deletes a `.ext` key that has values but no subkeys | read | shell_integration.py:49-55 | delete only when empty (no values, no subkeys); test with a foreign value | tester, builder |
+| H9 | Dependencies unpinned, venv has extras | read | requirements.txt | hash-pinned lock file, build from a fresh venv | builder, windows-builder |
+| H10 | `build.ps1` ignores the icon step's exit code | read | build.ps1:26 | check `$LASTEXITCODE` | builder |
 
-- PySide6 window: drag and drop, formats filtered by the selection, one progress bar, Advanced options, "move originals to
-  Recycle Bin" switch, fixed English labels. Single instance: a second launch forwards its files to the first through a
-  `QLocalServer` named pipe, so a multi-file right-click opens one window.
-- Done when: all tabs and states construct from source and frozen, no Traceback in `%LOCALAPPDATA%\Convert\logs`.
+Done when: **security-auditor** re-runs the same brief and returns no HIGH or MEDIUM; H1, H2, H4, H8 have tests.
 
-## v0.3.0 Explorer menu and installer
+**Release v0.1.1 here** (S + H items), unless D1 says otherwise.
 
-- `shell_integration.py --install-menu / --uninstall-menu` writes and removes the HKCU verbs for the supported extensions only.
-- `installer\convert.iss` (Inno Setup 6): per-user install to `%LOCALAPPDATA%\Programs\Convert`, Start menu entry, menu verbs,
-  uninstall removes both, asks whether to keep `%APPDATA%\Convert`. Needs Inno Setup (`winget install JRSoftware.InnoSetup`, the user's OK).
-- ffmpeg is not bundled (licence): the installer looks for it and the app tells the user how to get it. Decision for the user:
-  bundle a GPL ffmpeg build or keep it external.
-- Done when: install, right-click, convert, uninstall leaves no registry key and no file (checked in Windows Sandbox or a spare account).
+## v0.1.3: document fidelity
+
+DOCX reader gaps (all **read**, doc_conv.py:26-40): hyperlink text dropped, content controls and table of contents skipped, images dropped, nested tables dropped, merged cells repeated, lists lose bullets, only English "Heading N" styles become headings (a French "Titre 1" does not). Plan: handle each with a test file, warn when something is dropped, never trash a source that lost content. Also: PDF "Titre/Heading" detection for FR styles, UTF-16 and BOM text round trips.
+Agents: tester (builds sample docx), builder, reviewer. Done when: a French docx with a link, a list, a picture and a table converts to PDF and every element is present.
+
+## v0.2.0: window polish (needs the user's OK on the element list first)
+
+From the UI survey (ui.py, theme.py). Nothing changes until you approve the list of elements with position, size, colour.
+
+| ID | Item | Today | Agent |
+|---|---|---|---|
+| U1 | Per-file rows: name, type icon, state (waiting, converting, done, failed), remove button | names only (ui.py:149), no per-item remove | ui-designer |
+| U2 | Per-file progress, smooth bar animation | bar moves per file only (ui.py:224-230) | ui-designer |
+| U3 | Errors: one line per file, wrapped, text selectable, "Open log folder" | one joined label, no wrap, not copyable (ui.py:90,249) | ui-designer |
+| U4 | Drag and drop: highlight while over the window, message for rejected files | accepts anything, silent skips (ui.py:133-138,125-129) | ui-designer |
+| U5 | Transitions: fade between empty, files, converting, done; status text cross-fade | none | ui-designer |
+| U6 | Light and dark theme, follows Windows (D5) | dark only (theme.py:2-3) | ui-designer |
+| U7 | Remember window size and position, and the last format per file type | neither saved (settings.py:23-24) | builder |
+| U8 | Keyboard: Enter converts, Esc cancels, Delete removes a row, Ctrl+O adds files | none | ui-designer |
+| U9 | Accessibility: label buddies, tooltips, tab order, visible focus | none | ui-designer |
+| U10 | "Reset options", "Add files" button and file picker | none | ui-designer |
+| U11 | After success rows show "done" instead of staying as if not converted | list unchanged (ui.py:245-246) | ui-designer |
+| U12 | ffmpeg missing: copyable command and a button that opens the download page (no silent install) | text only (ui.py:155) | ui-designer |
+
+Done when: offscreen smoke test builds every state, frozen exe launches, **you** look at it (I cannot judge looks).
+
+## v0.3.0: installer and release
+
+| ID | Item | Today (convert.iss) | Agent |
+|---|---|---|---|
+| I1 | License page (MIT) | none | builder |
+| I2 | Optional desktop shortcut, unchecked | none | builder |
+| I3 | French and English installer | English only | builder |
+| I4 | Upgrade removes files that no longer exist (`InstallDelete`), `AppMutex` so a running Convert is detected | files left behind | builder |
+| I5 | Final page: ffmpeg status and how to install it (D3) | none | builder |
+| I6 | `build.ps1` also writes `SHA256SUMS.txt` ready to attach to a GitHub Release | partly | windows-builder |
+| I7 | Code signing (D4) | none | user |
+| I8 | Optional update check (D2) | none | builder |
+| I9 | Real install, right-click, uninstall check in **your terminal** (the agent shell hides the real registry) | done for v0.1.0 | windows-builder via run_in_terminal |
+
+Done when: install, upgrade over the previous version, and uninstall are clean in the real registry; the release page has the setup and its SHA256.
+
+## v0.4.0: tests and CI
+
+Gaps from the coverage survey (54 tests today): real conversion for every audio id (WMA, AC3, WavPack, MP2, WAV, M4A, ALAC 24-bit), HEVC, AV1, ProRes, fps, keep_audio, hardware-encoder flags (argument level), every image input type (JPG, HEIC, AVIF, TIFF, GIF, BMP, WebP, palette, CMYK), document inputs (HTML, RTF, ODT, UTF-8 and UTF-16 text, `.markdown`), multi-page PDF naming, JPEG pages, dpi, encrypted and corrupt PDF, a corrupt file per family, a silent video to audio, CLI (exit codes, format listing, unknown id, install/uninstall dispatch), settings (corrupt, wrong type, BOM), UI (cancel, drag, ffmpeg missing with a mock, pipe success path, closing during a run), shell (foreign verb, `installed()`, values-only key), build refusals, a scripted frozen-exe smoke test run by `build.ps1`.
+CI (D6): GitHub Actions on `windows-latest` running the suite on every push.
+Agents: scout (list), tester (writes), reviewer. Done when: >= 120 tests, CI green, frozen smoke test part of the build.
+
+## Not planned unless you ask
+
+Top-level entry in the short Windows 11 menu (needs a signed MSIX package), Excel/PowerPoint, legacy `.doc`, a website, telemetry.
