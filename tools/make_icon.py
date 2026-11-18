@@ -41,8 +41,14 @@ def draw(size=512):
     polys = _arrows(u)
     off = 0.2 * u
     # glass copies: translucent fill, no outline, a faint soft shadow so they read as a pane
-    shadow = _layer(n, polys, off, off + 0.15 * u, (10, 30, 100, 70)).filter(ImageFilter.GaussianBlur(0.18 * u))
-    glass = _layer(n, polys, off, off, (255, 255, 255, 70))
+    # the left arrow is the exact mirror of the right one, glass copy included: it moves left, not right
+    sides = list(zip(polys, (off, -off)))
+    shadow = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    glass = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    for poly, dx in sides:
+        shadow = Image.alpha_composite(shadow, _layer(n, [poly], dx, off + 0.15 * u, (10, 30, 100, 70)))
+        glass = Image.alpha_composite(glass, _layer(n, [poly], dx, off, (255, 255, 255, 70)))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(0.18 * u))
     main_shadow = _layer(n, polys, 0, 0.12 * u, (10, 30, 100, 80)).filter(ImageFilter.GaussianBlur(0.15 * u))
     main = _layer(n, polys, 0, 0, (255, 255, 255, 255))
 
