@@ -49,7 +49,7 @@ Contents: DOCX reader keeps links, content controls, pictures, lists, nested and
 - Frozen `--cli` in a temp profile: French DOCX (title style "Titre 1", link, bullet, picture, table) to PDF: all four texts found, 1 image, 1 link. Log written, no Convert process left.
 - Not verified: frozen audio/video warnings (the windowed exe prints no warning; covered in source tests only), install, right-click and uninstall with this installer, the PDF by eye, DOCX files made by Word or LibreOffice, hardware encoders, SmartScreen (not signed).
 
-## v0.1.4 (2026-11-18, not tagged, not published)
+## v0.1.4 (2026-11-18, published)
 
 Contents: DOCX writer keeps lists, tables (merged, nested), links and pictures; DOCX reader lists footnotes and keeps nested list levels; ODT and RTF read with structure by own parsers (odfpy and striprtf removed from `requirements.txt`); PDF drawn page by page without Qt's page number, with the requested 15 mm margins (side margins narrower than before).
 - `build.ps1 v0.1.4` at commit `6dd4e9b` (feature commit `b02f79c`, fix `da0eb63`); rebuilt once, the first build (`f7a646e`) is under `archives\`: PyInstaller one-folder + Inno Setup.
@@ -61,4 +61,16 @@ Contents: DOCX writer keeps lists, tables (merged, nested), links and pictures; 
 - Found by the user's test file (`Lorem ipsum.docx`, no numbering part): every DOCX without `word/numbering.xml` failed with an empty error since v0.1.3 (python-docx raises NotImplementedError). Fixed, regression test added, errors without a message now show the exception name. The published v0.1.3 setup has this bug. Frozen retest on a copy of that file: PDF, ODT, RTF, HTML, TXT all written, no page number, left margin 46 pt.
 - Found while testing: Qt's `drawContents` drew white text in Windows dark mode (fixed with an explicit palette, pixel test added); an ODT zip handle left open (fixed with a `with` block).
 - Not verified: install, right-click and uninstall with this installer, DOCX/ODT/RTF files made by Word or LibreOffice, the PDF and DOCX output by eye (one rendered PDF page was looked at), hardware encoders, SmartScreen (not signed).
+
+## v0.1.5 (2026-11-18, not tagged, not published)
+
+Contents: cancel stops image jobs between frames and document jobs between pages; animations above 500 frames or 400 million pixels are refused for multi-frame targets; failed files are listed one per line (selectable, wrapped); "Open log folder" button; "Cancelling..." message.
+- `build.ps1 v0.1.5` at commit `6a036b1` (feature commit `368ea83`): PyInstaller one-folder + Inno Setup.
+  - `Convert.exe` sha256 `7b0728396ef5a3e49c54a5150878703ca803f57f4dcaf7fe97e90f56b0b0a7b2`
+  - `Convert-Setup-v0.1.5.exe` sha256 `6089f79631985ccc2aac06896b54af72fe1b1d5a3794283cb32a34146002e372`
+  - Properties > Details read back on both files: version 0.1.5, copyright "Copyright (c) 2026 TheCreator0169. MIT License."
+- Source tests: 132, 1 skipped, all pass on two runs, with ffmpeg on the PATH.
+- Source window check (offscreen): a 200-frame 60 MB GIF to WebP, Cancel pressed after 0.4 s, finished in 0.44 s with "Cancelled.", no output, source kept.
+- Frozen `--cli` in a temp profile: a 600-frame GIF to PDF is refused (exit 1, log says "animation too large"), a 6-frame GIF to WebP is written. No Convert process left.
+- Not verified: Cancel and the error list in the frozen window (no GUI automation here: the user's test), install, right-click and uninstall with this installer, hardware encoders, SmartScreen (not signed).
 
