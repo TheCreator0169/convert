@@ -59,6 +59,13 @@ class Encoders(unittest.TestCase):
                 self.assertIn(f"Video: {codec}", err)
                 self.assertIn("Audio:", err)
 
+    def test_tiny_video_converts_with_hardware_encoding_on(self):
+        # NVENC refuses frames this small; the conversion must fall back to software instead of failing
+        tiny = self.dir / "tiny.mp4"
+        run([FFMPEG, "-v", "error", "-f", "lavfi", "-i", "testsrc=s=96x64:d=1", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+             str(tiny)])
+        self.assertIn("Video: h264", self.convert(tiny, "mkv", hw=True))
+
     def test_video_formats_cover_the_list(self):
         self.assertEqual(set(VIDEO_CODEC) | {"gif"}, set(OUTPUTS["video"]))
 

@@ -2,6 +2,8 @@
 
 # Convert for Windows
 
+[![tests](https://github.com/TheCreator0169/convert/actions/workflows/tests.yml/badge.svg)](https://github.com/TheCreator0169/convert/actions/workflows/tests.yml)
+
 Right-click files in Explorer, choose **Convert**, pick a format. Everything runs on your PC: nothing is uploaded,
 there is no network code, no account, no analytics.
 

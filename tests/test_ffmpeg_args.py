@@ -1,4 +1,5 @@
 import unittest
+from unittest import mock
 
 from convert_win import ffmpeg_conv as fc
 from convert_win.formats import DEFAULTS, OUTPUTS
@@ -57,6 +58,34 @@ class FfmpegArgs(unittest.TestCase):
             a = args("video", fid, subtitles=True)
             self.assertEqual((a[a.index("0:s?") - 1], a[a.index("-c:s") + 1]), ("-map", codec), fid)
         self.assertNotIn("-c:s", args("video", "mp4"))
+
+    def test_hardware_failure_retries_in_software_and_says_so(self):
+        calls = []
+
+        def fake_run(a, cancel=None):
+            calls.append(a)
+            enc = a[a.index("-c:v") + 1] if "-c:v" in a else ""
+            return (1, "", "too small") if enc == "h264_nvenc" else (0, "", "")
+
+        opts = {**DEFAULTS["video"]}
+        with mock.patch.object(fc, "find_tool", return_value="ffmpeg"), mock.patch.object(fc, "run", fake_run), \
+                mock.patch.object(fc, "usable_encoders", return_value=frozenset({"h264_nvenc"})):
+            warn = fc.convert("in.mp4", "out.mp4", "video", OUTPUTS["video"]["mp4"], opts)
+        self.assertIn("software encoder was used", warn)
+        self.assertEqual([c[c.index("-c:v") + 1] for c in calls if "-c:v" in c], ["h264_nvenc", "libx264"])
+
+    def test_software_failure_is_not_retried(self):
+        calls = []
+
+        def fake_run(a, cancel=None):
+            calls.append(a)
+            return (1, "", "bad input") if "-c:v" in a else (0, "", "")
+
+        with mock.patch.object(fc, "find_tool", return_value="ffmpeg"), mock.patch.object(fc, "run", fake_run), \
+                mock.patch.object(fc, "usable_encoders", return_value=frozenset()):
+            with self.assertRaisesRegex(RuntimeError, "bad input"):
+                fc.convert("in.mp4", "out.mp4", "video", OUTPUTS["video"]["mp4"], {**DEFAULTS["video"]})
+        self.assertEqual(len([c for c in calls if "-c:v" in c]), 1)
 
     def test_gif_uses_palette(self):
         a = args("video", "gif")

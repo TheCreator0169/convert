@@ -137,7 +137,13 @@ def convert(src, dst, kind, fmt, opts, cancel=None):
         elif not opts["subtitles"]:
             out.append("subtitles were dropped")
     have = usable_encoders(ffmpeg) if kind == "video" else frozenset()
-    rc, _, err = run(build_args(ffmpeg, src, dst, kind, fmt, opts, have), cancel)
+    args = build_args(ffmpeg, src, dst, kind, fmt, opts, have)
+    rc, _, err = run(args, cancel)
+    if rc and "-c:v" in args and any(h in args[args.index("-c:v") + 1] for h in ("nvenc", "qsv", "amf")):
+        # a hardware encoder has size and format limits ffmpeg only reports at encode time (NVENC refuses tiny frames)
+        rc, _, err = run(build_args(ffmpeg, src, dst, kind, fmt, {**opts, "hw": False}, have), cancel)
+        if not rc:
+            out.append("the hardware encoder failed on this video, the software encoder was used")
     if rc:
         raise RuntimeError(f"ffmpeg failed: {err.strip().splitlines()[-1] if err.strip() else rc}")
     return "; ".join(out) or None
