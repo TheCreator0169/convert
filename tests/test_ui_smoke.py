@@ -43,6 +43,16 @@ class UiSmoke(unittest.TestCase):
         self.win.add_files([exe, self.dir / "nope.png", self.dir])
         self.assertEqual(self.win.files, [])
 
+    def test_video_file_offers_mp3_with_audio_options(self):
+        mp4 = self.dir / "a.mp4"
+        mp4.touch()
+        self.win.add_files([mp4])
+        ids = [self.win.fmt.itemData(i) for i in range(self.win.fmt.count())]
+        self.assertEqual(ids[0], "mp4")
+        self.win.fmt.setCurrentIndex(ids.index("mp3"))
+        self.assertIn("bitrate", self.win.opt_widgets)
+        self.assertIn("audio_track", self.win.opt_widgets)
+
     def test_mixed_kinds_offer_nothing(self):
         wav = self.dir / "a.wav"
         wav.touch()

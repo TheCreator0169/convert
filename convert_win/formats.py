@@ -72,6 +72,8 @@ def outputs_for(paths):
     if len(types) != 1:
         return []
     t = types.pop()
+    if t == "video":  # a video can also give its sound track
+        return [*OUTPUTS["video"].values(), *OUTPUTS["audio"].values()]
     own = {Path(p).suffix.lower().lstrip(".") for p in paths}
     return [f for f in OUTPUTS[t].values() if not (len(own) == 1 and f.ext in own and t in ("doc", "image"))]
 

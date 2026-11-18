@@ -20,6 +20,11 @@ class Formats(unittest.TestCase):
         self.assertIn("mp3", ids)
         self.assertNotIn("mov", ids)
 
+    def test_video_alone_offers_video_then_audio_targets(self):
+        ids = [f.id for f in formats.outputs_for(["a.mp4"])]
+        self.assertEqual((ids[0], ids[-1]), ("mp4", "mp2"))
+        self.assertIn("mp3", ids)
+
     def test_mixed_families_offer_nothing(self):
         self.assertEqual(formats.outputs_for(["a.wav", "b.png"]), [])
         self.assertEqual(formats.outputs_for(["a.exe"]), [])
