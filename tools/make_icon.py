@@ -7,13 +7,14 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
 TOP, BOTTOM = (0x6A, 0xA8, 0xFF), (0x2F, 0x5B, 0xD8)  # gradient corners: top-left, bottom-right
 SS = 2  # supersampling for smooth edges
+SCALE = 1.2  # arrow size around the icon centre
 
 
 def _arrows(u):
     """Right-pointing arrow on top, left-pointing below; polygons in pixels (u = 1/10 of the icon)."""
     right = [(2.4, 3.35), (6.0, 3.35), (6.0, 2.55), (7.8, 3.75), (6.0, 4.95), (6.0, 4.15), (2.4, 4.15)]
     left = [(7.6, 5.85), (4.0, 5.85), (4.0, 5.05), (2.2, 6.25), (4.0, 7.45), (4.0, 6.65), (7.6, 6.65)]
-    return [[(x * u, y * u) for x, y in a] for a in (right, left)]
+    return [[((5 + (x - 5) * SCALE) * u, (5 + (y - 5) * SCALE) * u) for x, y in a] for a in (right, left)]
 
 
 def _layer(n, polys, dx, dy, fill, outline=None, width=0):
