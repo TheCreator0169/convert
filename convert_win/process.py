@@ -1,6 +1,5 @@
 """The only place that starts a subprocess: no console window, cancellable."""
 import os
-import shutil
 import subprocess
 import sys
 import time
@@ -19,10 +18,19 @@ def find_tool(name):
         local = Path(sys.executable).with_name(f"{name}.exe")
         if local.exists():
             return str(local)
-    # shutil.which(name) alone searches the current folder first on Windows: a planted ffmpeg.exe beside the user's files
-    # would run. Search PATH only, and only absolute entries.
-    dirs = [d.strip('"') for d in os.environ.get("PATH", "").split(os.pathsep)]
-    return shutil.which(name, path=os.pathsep.join(d for d in dirs if d and os.path.isabs(d)))
+    # shutil.which also tries the current folder on Windows (unless NoDefaultCurrentDirectoryInExePath is set, which an
+    # Explorer launch does not have): a planted ffmpeg.exe beside the user's files would run. Walk PATH ourselves, absolute
+    # entries only.
+    exts = [e for e in os.environ.get("PATHEXT", ".EXE").lower().split(os.pathsep) if e] or [".exe"]
+    for d in os.environ.get("PATH", "").split(os.pathsep):
+        d = d.strip('"')
+        if not d or not os.path.isabs(d):
+            continue
+        for ext in exts:
+            cand = Path(d) / f"{name}{ext}"
+            if cand.is_file():
+                return str(cand)
+    return None
 
 
 def run(args, cancel=None):

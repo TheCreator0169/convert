@@ -29,3 +29,5 @@ One entry per gotcha: symptom, cause, fix or status.
 - Cancel cannot interrupt a single image or document conversion already running (checked between files, between PDF pages, and inside ffmpeg). Closing the window waits up to 30 s for it. Found by review 2026-11-18, planned v0.2.0.
 - Audio/video: only the first audio track is kept (`0:a:0`); extra tracks and subtitles are dropped with no warning, and the original is trashed if the switch is on. Needs ffprobe or a stream count: planned v0.1.3.
 - A long animated GIF to PDF/WebP/TIFF loads every frame in memory; a very long one can fail with a memory error (nothing is trashed then).
+- Single-instance pipe name is predictable (`Convert-GUI-<user>`): a second local account that creates it first can receive the file paths of this user's launches. Needs another local account; nothing converts without a click. Audit 2026-11-18, LOW, not planned.
+- H9 is half done: versions are pinned in `requirements.txt`; hashes (`--require-hashes`) and a fresh-venv build need `pip-tools` (a download, the user's OK).

@@ -31,6 +31,7 @@ class ToolLookup(Tmp):
         os.chdir(self.dir)
         self.addCleanup(os.chdir, old)
         with mock.patch.dict(os.environ, {"PATH": os.pathsep.join(["", ".", str(elsewhere)])}):
+            os.environ.pop("NoDefaultCurrentDirectoryInExePath", None)  # absent on a normal Explorer launch
             self.assertIsNone(process.find_tool("ffmpeg"))
 
     def test_exe_on_an_absolute_path_entry_is_found(self):  # H1
@@ -122,6 +123,17 @@ class LocalResources(Tmp):
         (out,) = convert_file(page, "pdf", self.opts)
         with pymupdf.open(out) as d:
             self.assertEqual(sum(len(p.get_images()) for p in d), 0)
+
+
+class LogScrub(unittest.TestCase):
+    def test_folder_is_removed_from_logged_error_text(self):  # H7
+        from convert_win.converter import scrub
+
+        src = Path(tempfile.gettempdir()) / "photo.png"
+        msg = f"cannot identify image file '{src}'"
+        self.assertNotIn(str(src.parent), scrub(msg, src))
+        self.assertIn("photo.png", scrub(msg, src))
+        self.assertNotIn("Users", scrub(f"cannot identify image file {str(src)!r}", src))  # the repr() form
 
 
 class LogRetention(Tmp):

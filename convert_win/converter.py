@@ -12,6 +12,13 @@ from .process import Cancelled
 log = logging.getLogger("convert")
 
 
+def scrub(text, path):
+    """Replace the folder of `path` in `text` so logs keep file names only."""
+    folder = str(Path(os.path.abspath(path)).parent)
+    # PIL quotes the path with repr(), which doubles the backslashes: scrub both spellings
+    return str(text).replace(folder.replace("\\", "\\\\"), "...").replace(folder, "...")
+
+
 def convert_file(src, fmt_id, options, trash_original=False, cancel=None, notes=None):
     """`options` maps option group (audio, video, gif, image, doc, pdf) to its dict. Raises on failure.
     Warnings go to the `notes` list. The original is trashed only when the output is complete (no warning)."""
@@ -50,6 +57,6 @@ def convert_file(src, fmt_id, options, trash_original=False, cancel=None, notes=
         try:
             send2trash(str(src))
         except Exception as e:  # the output is good: report it, do not fail the file
-            log.warning("recycle bin failed for %s: %s", src.name, e)
+            log.warning("recycle bin failed for %s: %s", src.name, scrub(e, src))
             notes.append(f"{src.name}: converted, but the original could not be moved to the Recycle Bin ({e})")
     return outs

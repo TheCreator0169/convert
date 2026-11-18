@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFormLayout, 
                                QListWidget, QProgressBar, QPushButton, QSpinBox, QVBoxLayout, QWidget)
 
 from . import settings, theme
-from .converter import convert_file
+from .converter import convert_file, scrub
 from .formats import DEFAULTS, file_type, option_key, outputs_for, output_fmt
 from .process import Cancelled, find_tool
 from .version import CONVERT_VERSION
@@ -63,7 +63,7 @@ class Worker(QThread):
                 self.cancelled = True
                 break
             except Exception as e:  # one bad file must not stop the batch
-                log.exception("failed %s", Path(f).name)
+                log.error("failed %s: %s", Path(f).name, scrub(e, f))
                 errs.append((Path(f).name, str(e)))
         self.done.emit([str(o) for o in outs], errs, notes)
 
@@ -355,8 +355,11 @@ def run(files):
                 paths = json.loads(buf.decode())
             except (ValueError, RecursionError):  # bad JSON, or nested so deep that parsing overflows
                 return
-            if isinstance(paths, list):
-                win.add_files(p for p in paths if isinstance(p, str))  # add_files keeps only real, supported files
+            try:
+                if isinstance(paths, list):
+                    win.add_files(p for p in paths if isinstance(p, str))  # add_files keeps only real, supported files
+            except Exception:  # a hostile message must not take the window down
+                log.exception("bad pipe message")
             win.showNormal()
             win.raise_()
             win.activateWindow()
