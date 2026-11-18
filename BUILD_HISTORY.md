@@ -38,7 +38,7 @@ Same code as v0.1.1 (commit `109ccd2`, which already held the security hardening
 - Source tests: 92, 1 skipped, all pass. Frozen `--cli` wav to mp3 works, log written, no Convert process left.
 - Not verified: install, right-click and uninstall with this installer, the window by eye, hardware encoders, SmartScreen (not signed).
 
-## v0.1.3 (2026-11-18, not tagged, not published)
+## v0.1.3 (2026-11-18, published)
 
 Contents: DOCX reader keeps links, content controls, pictures, lists, nested and merged tables, localized heading styles; ffmpeg conversions warn on extra audio tracks and subtitles (original kept).
 - `build.ps1 v0.1.3` at commit `493fcc8` (feature commit `e71ab4d`): PyInstaller one-folder + Inno Setup.
@@ -48,4 +48,16 @@ Contents: DOCX reader keeps links, content controls, pictures, lists, nested and
 - Source tests: 104, 1 skipped, all pass, with ffmpeg on the PATH.
 - Frozen `--cli` in a temp profile: French DOCX (title style "Titre 1", link, bullet, picture, table) to PDF: all four texts found, 1 image, 1 link. Log written, no Convert process left.
 - Not verified: frozen audio/video warnings (the windowed exe prints no warning; covered in source tests only), install, right-click and uninstall with this installer, the PDF by eye, DOCX files made by Word or LibreOffice, hardware encoders, SmartScreen (not signed).
+
+## v0.1.4 (2026-11-18, not tagged, not published)
+
+Contents: DOCX writer keeps lists, tables (merged, nested), links and pictures; DOCX reader lists footnotes and keeps nested list levels; ODT and RTF read with structure by own parsers (odfpy and striprtf removed from `requirements.txt`); PDF drawn page by page without Qt's page number, with the requested 15 mm margins (side margins narrower than before).
+- `build.ps1 v0.1.4` at commit `f7a646e` (feature commit `b02f79c`): PyInstaller one-folder + Inno Setup.
+  - `Convert.exe` sha256 `d6830b6190d6bb2fe570b77ead98352a025f0090d0d4f63542c1ae6d831d3bd6`
+  - `Convert-Setup-v0.1.4.exe` sha256 `cf7c6a7e00978c7e02bfa910a7c636a8971105f85dade0e63dbd493e7fd65700`
+  - Properties > Details read back on both files: version 0.1.4, copyright "Copyright (c) 2026 TheCreator0169. MIT License."
+- Source tests: 121, 1 skipped, all pass, with ffmpeg on the PATH.
+- Frozen `--cli` in a temp profile: French DOCX to PDF (text, 1 image, 1 link, black text present) and to DOCX (Heading 1, bullet, 1 table, 1 picture, 1 hyperlink); hand-made ODT to PDF and RTF to PDF (text found, black text present). No Convert process left.
+- Found while testing: Qt's `drawContents` drew white text in Windows dark mode (fixed with an explicit palette, pixel test added); an ODT zip handle left open (fixed with a `with` block).
+- Not verified: install, right-click and uninstall with this installer, DOCX/ODT/RTF files made by Word or LibreOffice, the PDF and DOCX output by eye (one rendered PDF page was looked at), hardware encoders, SmartScreen (not signed).
 
