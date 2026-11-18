@@ -60,11 +60,16 @@ def prune_logs(logs, days=LOG_DAYS):
             pass
 
 
+def log_dir():
+    d = _dir("LOCALAPPDATA") / "logs"
+    d.mkdir(exist_ok=True)
+    return d
+
+
 def setup_logging():
     log = logging.getLogger("convert")
     if not log.handlers:
-        logs = _dir("LOCALAPPDATA") / "logs"
-        logs.mkdir(exist_ok=True)
+        logs = log_dir()
         h = logging.FileHandler(logs / f"convert_{date.today():%Y%m%d}.log", encoding="utf-8")
         h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         log.addHandler(h)

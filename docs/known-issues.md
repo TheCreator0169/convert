@@ -25,9 +25,9 @@ One entry per gotcha: symptom, cause, fix or status.
 - Explorer starts one process per selected file: the single-instance pipe collects them.
 - A console child of a windowed exe opens a terminal window: every subprocess uses `CREATE_NO_WINDOW`.
 
-- Cancel cannot interrupt a single image or document conversion already running (checked between files, between PDF pages, and inside ffmpeg). Closing the window waits up to 30 s for it. Found by review 2026-11-18, planned v0.2.0.
+- Cancel (v0.1.5) stops an image job between frames, a document job between pages, a PDF job between pages and ffmpeg at once. It cannot interrupt the decoding or saving of one single frame or page: a huge single image finishes that step first (the window says "Cancelling..."; nothing is left behind and nothing is trashed).
 - Audio/video: only the first audio track is kept (`0:a:0`) and subtitles are dropped; since v0.1.3 this is reported as a warning and the original is kept.
-- A long animated GIF to PDF/WebP/TIFF loads every frame in memory; a very long one can fail with a memory error (nothing is trashed then).
+- An animation kept as several frames (GIF/WebP/TIFF/PDF target) is refused above 500 frames or 400 million pixels in all (frames x width x height, about 1.6 GB as RGBA) with "animation too large"; nothing is trashed. Converting it to a single-frame format still works (first frame, with a warning).
 - Single-instance pipe name is predictable (`Convert-GUI-<user>`): a second local account that creates it first can receive the file paths of this user's launches. Needs another local account; nothing converts without a click. Audit 2026-11-18, LOW, not planned.
 - H9 is half done: versions are pinned in `requirements.txt`; hashes (`--require-hashes`) and a fresh-venv build need `pip-tools` (a download, the user's OK).
 - DOCX reader (v0.1.4): text boxes, legacy objects (`w:pict`, `w:object`) and EMF/WMF/SVG pictures are not carried over (warning, original kept). Headers and footers are deliberately not read (they repeat on every page). Footnotes and endnotes are listed at the end as [n]. Nested lists keep up to 6 levels.

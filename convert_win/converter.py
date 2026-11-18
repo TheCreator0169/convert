@@ -45,9 +45,9 @@ def convert_file(src, fmt_id, options, trash_original=False, cancel=None, notes=
             if kind in ("audio", "video"):
                 warn = ffmpeg_conv.convert(src, dst, kind, fmt, opts, cancel)
             elif kind == "image":
-                warn = image_conv.convert(src, dst, fmt, opts)
+                warn = image_conv.convert(src, dst, fmt, opts, cancel)
             else:
-                warn = doc_conv.convert(src, dst, fmt, opts)
+                warn = doc_conv.convert(src, dst, fmt, opts, cancel)
             if not dst.exists() or dst.stat().st_size == 0:
                 raise RuntimeError("converter wrote no output")
         except BaseException:

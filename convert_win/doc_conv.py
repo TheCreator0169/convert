@@ -8,6 +8,8 @@ from PySide6.QtGui import (QAbstractTextDocumentLayout, QColor, QPageLayout, QPa
                            QTextCursor, QTextDocument, QTextDocumentWriter, QTextListFormat, QTextTable)
 from PySide6.QtWidgets import QApplication
 
+from .process import Cancelled
+
 
 def _strip_local_images(doc):
     """Drop every image that is not an inline data: URI. An <img src="file:///..."> in an untrusted HTML or Markdown
@@ -456,7 +458,7 @@ def load(path):
     return doc
 
 
-def _print_pages(doc, w):
+def _print_pages(doc, w, cancel=None):
     """Draw page by page: QTextDocument.print_ stamps a page number at the bottom of every page.
     The palette is set here: drawContents would use the desktop one (white text in Windows dark mode)."""
     rect = w.pageLayout().paintRectPixels(w.resolution())
@@ -468,6 +470,8 @@ def _print_pages(doc, w):
     painter = QPainter(w)
     try:
         for page in range(doc.pageCount()):
+            if cancel is not None and cancel.is_set():
+                raise Cancelled()
             if page:
                 w.newPage()
             ctx = QAbstractTextDocumentLayout.PaintContext()
@@ -645,15 +649,17 @@ def _docx_loses_content(path):
     return any(tag in xml for tag in DOCX_DROPPED)
 
 
-def convert(src, dst, fmt, opts):
-    """Returns a warning string when the source was read as plain text only, else None."""
+def convert(src, dst, fmt, opts, cancel=None):
+    """Returns a warning string when part of the source was not carried over, else None. Cancel is checked per page."""
     QApplication.instance() or QApplication(["convert"])  # QApplication, not QGuiApplication: the window needs that type
     doc = load(src)
+    if cancel is not None and cancel.is_set():
+        raise Cancelled()
     if fmt.id == "pdf":
         w = QPdfWriter(str(dst))
         w.setPageSize(QPageSize(QPageSize.Letter if opts["page"] == "Letter" else QPageSize.A4))
         w.setPageMargins(QMarginsF(15, 15, 15, 15), QPageLayout.Millimeter)
-        _print_pages(doc, w)
+        _print_pages(doc, w, cancel)
     elif fmt.id == "docx":
         _write_docx(doc, dst)
     elif fmt.id == "odt":

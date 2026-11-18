@@ -8,7 +8,7 @@ import sys
 import threading
 from pathlib import Path
 
-from PySide6.QtCore import QThread, QTimer, Signal
+from PySide6.QtCore import QThread, QTimer, Qt, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel,
@@ -96,6 +96,8 @@ class Window(QWidget):
         self.trash = QCheckBox("Move originals to the Recycle Bin after a successful conversion")
         self.trash.setChecked(self.st["trash_originals"])
         self.msg = QLabel("")
+        self.msg.setWordWrap(True)  # one line per failed file, wrapped, and the text can be selected and copied
+        self.msg.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.bar = QProgressBar()
         self.bar.setTextVisible(False)
         self.go = QPushButton("Convert")
@@ -107,12 +109,16 @@ class Window(QWidget):
         self.open_btn = QPushButton("Open folder")
         self.open_btn.clicked.connect(self._open_folder)
         self.open_btn.hide()
+        self.logs_btn = QPushButton("Open log folder")
+        self.logs_btn.clicked.connect(lambda: os.startfile(str(settings.log_dir())))
+        self.logs_btn.hide()
         self.clear = QPushButton("Clear")
         self.clear.clicked.connect(self._clear)
 
         row = QHBoxLayout()
         row.addWidget(self.clear)
         row.addStretch()
+        row.addWidget(self.logs_btn)
         row.addWidget(self.open_btn)
         row.addWidget(self.stop)
         row.addWidget(self.go)
@@ -176,6 +182,7 @@ class Window(QWidget):
         self.go.setEnabled(bool(self.fmt.count()) and not self.worker)
         self.clear.setEnabled(not self.worker)
         self.open_btn.hide()
+        self.logs_btn.hide()
         self._build_options()
 
     # --- options -----------------------------------------------------------------------------------------------
@@ -255,6 +262,7 @@ class Window(QWidget):
         if self.worker:
             self.worker.cancel.set()
             self.stop.setEnabled(False)
+            self._say("Cancelling: the current file is stopped at its next page or frame...", "muted")
 
     def _done(self, outs, errs, notes=()):
         w, self.worker = self.worker, None
@@ -267,7 +275,7 @@ class Window(QWidget):
         if w.trash:
             self.files = [f for f in self.files if Path(f).exists()]
         if errs:
-            text = f"{len(outs)} file(s) written, {len(errs)} failed: " + "; ".join(f"{n}: {m}" for n, m in errs)
+            text = f"{len(outs)} file(s) written, {len(errs)} failed:\n" + "\n".join(f"- {n}: {m}" for n, m in errs)
         elif w.cancelled:
             text = "Cancelled."
         else:
@@ -284,6 +292,7 @@ class Window(QWidget):
         added = len(self.files) - before
         self._say(text + (f"\n{added} new file(s) added." if added else ""), kind)
         self.open_btn.setVisible(bool(outs))
+        self.logs_btn.setVisible(bool(errs))
 
     def _open_folder(self):
         if self.outs:
