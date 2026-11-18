@@ -9,3 +9,4 @@ archives/
 .env.*
 Convert.spec
 .claude/
+CLAUDE.md

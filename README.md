@@ -53,7 +53,7 @@ py -3.13 -m venv .venv-win
 powershell -File build.ps1 v0.1.0                            # exe, plus installer if Inno Setup is installed
 ```
 
-Project rules and the agent setup: `CLAUDE.md`, `.claude\`, `docs\`.
+Project notes: `docs\`. The agent setup (`.claude\`, `CLAUDE.md`) is kept local.
 
 ## License
 
