@@ -25,3 +25,7 @@ One entry per gotcha: symptom, cause, fix or status.
 - PyInstaller does not collect every plugin by itself (Qt platform plugin, `pillow_heif`, PyMuPDF): check each family in the frozen build.
 - Explorer starts one process per selected file: the single-instance pipe collects them.
 - A console child of a windowed exe opens a terminal window: every subprocess uses `CREATE_NO_WINDOW`.
+
+- Cancel cannot interrupt a single image or document conversion already running (checked between files, between PDF pages, and inside ffmpeg). Closing the window waits up to 30 s for it. Found by review 2026-11-18, planned v0.2.0.
+- Audio/video: only the first audio track is kept (`0:a:0`); extra tracks and subtitles are dropped with no warning, and the original is trashed if the switch is on. Needs ffprobe or a stream count: planned v0.1.3.
+- A long animated GIF to PDF/WebP/TIFF loads every frame in memory; a very long one can fail with a memory error (nothing is trashed then).

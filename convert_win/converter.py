@@ -23,7 +23,7 @@ def convert_file(src, fmt_id, options, trash_original=False, cancel=None, notes=
         raise Cancelled()
     warn = None
     if kind == "pdf":
-        outs = pdf_conv.convert(src, fmt, opts, cancel)
+        outs, warn = pdf_conv.convert(src, fmt, opts, cancel)
     else:
         dst = unique_path(src, fmt.ext)
         try:

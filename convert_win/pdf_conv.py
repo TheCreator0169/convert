@@ -6,17 +6,24 @@ from .process import Cancelled
 
 
 def convert(src, fmt, opts, cancel=None):
-    """Returns the list of files written; removes partial output on any failure."""
-    outs = []
+    """Returns (files written, warning or None); removes partial output on any failure."""
+    outs, warn = [], None
     try:
         with pymupdf.open(src) as doc:
             if fmt.id == "txt":
-                text = "\n\n".join(p.get_text() for p in doc)
-                if not text.strip():
+                texts = []
+                for page in doc:
+                    if cancel is not None and cancel.is_set():
+                        raise Cancelled()
+                    texts.append(page.get_text())
+                empty = sum(not t.strip() for t in texts)
+                if empty == len(texts):
                     raise RuntimeError("no text found (scanned PDF?)")
+                if empty:
+                    warn = f"{empty} of {len(texts)} page(s) had no text (scanned or blank)"
                 dst = unique_path(src, "txt")
-                dst.write_text(text, "utf-8")
                 outs.append(dst)
+                dst.write_text("\n\n".join(texts), "utf-8")
             else:
                 pad = len(str(doc.page_count))
                 for n, page in enumerate(doc, 1):
@@ -31,4 +38,4 @@ def convert(src, fmt, opts, cancel=None):
         for o in outs:
             o.unlink(missing_ok=True)
         raise
-    return outs
+    return outs, warn

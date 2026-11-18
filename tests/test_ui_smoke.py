@@ -49,6 +49,22 @@ class UiSmoke(unittest.TestCase):
         self.win.add_files([self.png, wav])
         self.assertEqual(self.win.fmt.count(), 0)
 
+    def test_files_added_during_a_run_are_queued_then_added(self):  # S8
+        other = self.dir / "b.png"
+        Image.new("RGB", (4, 4)).save(other)
+        self.win.worker = object()  # pretend a batch is running
+        self.win.add_files([other])
+        self.assertEqual(self.win.files, [])
+        self.assertEqual(self.win.pending, [str(other)])
+        self.win.worker = None
+
+    def test_huge_saved_number_does_not_overflow_the_spin_box(self):  # reviewer finding 4
+        self.win.st["options"]["image"]["quality"] = 2 ** 40
+        self.win.add_files([self.png])
+        self.win.fmt.setCurrentIndex(self.win.fmt.findData("webp"))
+        self.win._build_options()
+        self.assertEqual(self.win.opt_widgets["quality"].value(), 100)
+
     def test_convert_end_to_end_and_options_saved(self):
         self.win.add_files([self.png])
         self.win.fmt.setCurrentIndex(self.win.fmt.findData("webp"))

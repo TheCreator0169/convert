@@ -138,6 +138,52 @@ class DocSafety(Base):
         self.assertTrue(any("text only" in n for n in notes))
 
 
+    def test_utf16_that_looks_like_utf32_is_not_garbled(self):  # reviewer finding 1
+        src = self.dir / "n.txt"
+        src.write_bytes(bytes.fromhex("fffe0d000a000d00"))
+        (out,) = convert_file(src, "html", self.opts)
+        self.assertFalse(any(ord(c) > 0xFFFF for c in out.read_text("utf-8")))
+
+    def test_odd_length_utf16_fails_instead_of_mojibake(self):  # reviewer finding 1
+        src = self.dir / "odd.txt"
+        src.write_bytes(bytes([0xFF, 0xFE, 0x68, 0x00, 0x69]))
+        with self.assertRaises(RuntimeError):
+            convert_file(src, "txt", self.opts, trash_original=True)
+        self.assertEqual(self.trashed, [])
+
+    def test_docx_with_hyperlink_is_kept_with_a_warning(self):  # reviewer finding 9
+        import docx
+        from docx.opc.constants import RELATIONSHIP_TYPE as RT
+        from docx.oxml import OxmlElement
+        from docx.oxml.ns import qn
+
+        d = docx.Document()
+        p = d.add_paragraph("see ")
+        h = OxmlElement("w:hyperlink")
+        h.set(qn("r:id"), d.part.relate_to("https://example.com", RT.HYPERLINK, is_external=True))
+        p._p.append(h)
+        src = self.dir / "l.docx"
+        d.save(src)
+        notes = []
+        convert_file(src, "txt", self.opts, trash_original=True, notes=notes)
+        self.assertEqual(self.trashed, [])
+        self.assertTrue(notes)
+
+
+class PartialPdf(Base):
+    def test_pdf_with_an_empty_page_keeps_original(self):  # reviewer finding 2
+        src = self.dir / "p.pdf"
+        d = pymupdf.open()
+        d.new_page().insert_text((50, 50), "Page one has text")
+        d.new_page()
+        d.save(src)
+        d.close()
+        notes = []
+        convert_file(src, "txt", self.opts, trash_original=True, notes=notes)
+        self.assertEqual(self.trashed, [])
+        self.assertTrue(any("had no text" in n for n in notes))
+
+
 class SettingsSafety(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

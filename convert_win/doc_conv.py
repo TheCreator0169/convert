@@ -9,12 +9,17 @@ from PySide6.QtWidgets import QApplication
 
 def _read(path):
     raw = Path(path).read_bytes()
-    if raw.startswith((b"\xff\xfe", b"\xfe\xff")):  # UTF-16 BOM (UTF-32 LE starts the same way, so try it first); UTF-32 BE is not handled
-        for enc in ("utf-32", "utf-16"):
-            try:
-                return raw.decode(enc)
-            except UnicodeDecodeError:
-                pass
+    if raw.startswith(b"\xff\xfe\x00\x00"):  # UTF-32 LE BOM (a UTF-16 text starting with NUL is not realistic)
+        enc = "utf-32"
+    elif raw.startswith((b"\xff\xfe", b"\xfe\xff")):
+        enc = "utf-16"
+    else:
+        enc = None
+    if enc:
+        try:
+            return raw.decode(enc)
+        except UnicodeDecodeError as e:  # never guess: a wrong guess would end with the original in the Recycle Bin
+            raise RuntimeError(f"cannot decode {enc} text") from e
     try:
         return raw.decode("utf-8-sig")
     except UnicodeDecodeError:
@@ -141,6 +146,15 @@ def _write_rtf(doc, dst):
 
 
 LOSSY_IN = {"rtf": "RTF formatting was dropped (text only)", "odt": "ODT styles and tables were dropped (text only)"}
+DOCX_DROPPED = ("<w:hyperlink", "<w:drawing", "<w:pict", "<w:sdt")  # parts the DOCX reader does not carry over
+
+
+def _docx_loses_content(path):
+    import zipfile
+
+    with zipfile.ZipFile(path) as z:
+        xml = z.read("word/document.xml").decode("utf-8", "replace")
+    return any(tag in xml for tag in DOCX_DROPPED)
 
 
 def convert(src, dst, fmt, opts):
@@ -163,4 +177,7 @@ def convert(src, dst, fmt, opts):
         Path(dst).write_text(doc.toHtml(), "utf-8")
     else:
         Path(dst).write_text(doc.toPlainText(), "utf-8")
-    return LOSSY_IN.get(Path(src).suffix.lower().lstrip("."))
+    ext = Path(src).suffix.lower().lstrip(".")
+    if ext == "docx" and _docx_loses_content(src):
+        return "images, links or content controls were not carried over"
+    return LOSSY_IN.get(ext)

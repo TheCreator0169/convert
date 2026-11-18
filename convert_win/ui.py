@@ -73,6 +73,7 @@ class Window(QWidget):
         self.setAcceptDrops(True)
         self.setMinimumSize(520, 560)
         self.files, self.worker, self.outs, self.pending = [], None, [], []
+        self.save_error = ""
         self.st = settings.load()
         self.opt_widgets = {}
 
@@ -203,8 +204,9 @@ class Window(QWidget):
             else:
                 w = QSpinBox()
                 lo, hi = RANGE[key]
-                w.setRange(1 if group == "gif" and key == "fps" else lo, hi)
-                w.setValue(val)
+                lo = 1 if group == "gif" and key == "fps" else lo
+                w.setRange(lo, hi)
+                w.setValue(max(lo, min(hi, val)))  # a hand-edited huge number must not overflow the spin box
             self.opt_widgets[key] = w
             self.form.addRow(LABEL[key], w)
             w.setVisible(self.adv.isChecked())
@@ -221,7 +223,11 @@ class Window(QWidget):
         group = self._group()
         self.st["options"][group] = self._collect()
         self.st["trash_originals"] = self.trash.isChecked()
-        settings.save(self.st)
+        try:
+            settings.save(self.st)
+        except OSError as e:  # the conversion still runs; the status line shows it after the first file
+            log.warning("settings not saved: %s", e)
+            self.save_error = f"Settings could not be saved ({e})."
         self.worker = Worker(list(self.files), self.fmt.currentData(), self.st["options"], self.trash.isChecked())
         self.worker.progress.connect(self._progress)
         self.worker.done.connect(self._done)
@@ -262,13 +268,17 @@ class Window(QWidget):
             text = "Cancelled."
         else:
             text = f"Done: {len(outs)} file(s) written next to the originals."
+        notes = list(notes) + ([self.save_error] if self.save_error else [])
+        self.save_error = ""
         if notes:
             text += "\n" + "\n".join(notes)
         kind = "error" if errs or notes else "ok"
         pending, self.pending = self.pending, []
         self._refresh()
+        before = len(self.files)
         self.add_files(pending)
-        self._say(text + ("\nNew files were added." if pending else ""), kind)
+        added = len(self.files) - before
+        self._say(text + (f"\n{added} new file(s) added." if added else ""), kind)
         self.open_btn.setVisible(bool(outs))
 
     def _open_folder(self):
