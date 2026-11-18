@@ -8,6 +8,8 @@ LOSSY = {"libmp3lame", "aac", "libopus", "libvorbis", "wmav2", "ac3", "mp2"}
 CRF = {"h264": (18, 23, 28), "hevc": (20, 26, 32), "libvpx-vp9": (24, 31, 37), "av1": (25, 32, 40)}
 HW = {"h264": ("h264_nvenc", "h264_qsv", "h264_amf"), "hevc": ("hevc_nvenc", "hevc_qsv", "hevc_amf")}
 SOFT = {"h264": "libx264", "hevc": "libx265", "libvpx-vp9": "libvpx-vp9"}
+SUB_CODEC = {"mp4": "mov_text", "mov": "mov_text", "webm": "webvtt"}  # mkv keeps the stream as it is
+BITMAP_SUBS = {"hdmv_pgs_subtitle", "dvd_subtitle", "dvb_subtitle", "xsub"}  # pictures, cannot become text
 
 
 @lru_cache(maxsize=1)
@@ -72,7 +74,7 @@ def build_args(ffmpeg, src, dst, kind, fmt, opts, have=frozenset()):
     # -protocol_whitelist file: a path that looks like a URL must never make ffmpeg touch the network
     head = [ffmpeg, "-y", "-v", "error", "-nostdin", "-protocol_whitelist", "file", "-i", src]
     if kind == "audio":
-        return head + ["-vn", "-map", "0:a:0", "-map_metadata", "0"] + _audio_args(fmt, opts) + [dst]
+        return head + ["-vn", "-map", f"0:a:{opts['audio_track'] - 1}", "-map_metadata", "0"] + _audio_args(fmt, opts) + [dst]
     if fmt.id == "gif":
         vf = (f"fps={max(1, opts['fps'])},scale='min({opts['width']},iw)':-1:flags=lanczos,"
               "split[a][b];[a]palettegen[p];[b][p]paletteuse")
@@ -95,25 +97,22 @@ def build_args(ffmpeg, src, dst, kind, fmt, opts, have=frozenset()):
         args += ["-r", str(opts["fps"])]
     if opts["keep_audio"]:
         a = {"libvpx-vp9": "libopus", "prores_ks": "pcm_s16le"}.get(codec, "aac")
-        args += ["-map", "0:a:0?", "-c:a", a] + ([] if a == "pcm_s16le" else ["-b:a", "192k"])
+        args += ["-map", f"0:a:{opts['audio_track'] - 1}?", "-c:a", a] + ([] if a == "pcm_s16le" else ["-b:a", "192k"])
     else:
         args += ["-an"]
+    if opts["subtitles"]:
+        args += ["-map", "0:s?", "-c:s", SUB_CODEC.get(fmt.ext, "copy")]
     if fmt.ext in ("mp4", "mov"):
         args += ["-movflags", "+faststart"]
     return args + [dst]
 
 
-def _lost(ffmpeg, src, kind, fmt, opts):
-    """Warning for what the chosen arguments leave out: extra audio tracks (only 0:a:0 is mapped) and subtitles."""
+def _probe(ffmpeg, src):
+    """(audio track count, subtitle codec names) of the input."""
     # no output file: ffmpeg lists the streams on stderr and exits 1, which is fine here
     _, _, err = run([ffmpeg, "-hide_banner", "-protocol_whitelist", "file", "-i", src])
-    n = {k: len(re.findall(rf"^\s+Stream #0:\d+\S*: {k}:", err, re.M)) for k in ("Audio", "Subtitle")}
-    out = []
-    if (kind == "audio" or (fmt.id != "gif" and opts["keep_audio"])) and n["Audio"] > 1:
-        out.append(f"{n['Audio']} audio tracks, only the first was kept")
-    if kind == "video" and fmt.id != "gif" and n["Subtitle"]:
-        out.append("subtitles were dropped")
-    return "; ".join(out) or None
+    audio = len(re.findall(r"^\s+Stream #0:\d+\S*: Audio:", err, re.M))
+    return audio, re.findall(r"^\s+Stream #0:\d+\S*: Subtitle: (\w+)", err, re.M)
 
 
 def convert(src, dst, kind, fmt, opts, cancel=None):
@@ -121,8 +120,24 @@ def convert(src, dst, kind, fmt, opts, cancel=None):
     ffmpeg = find_tool("ffmpeg")
     if not ffmpeg:
         raise RuntimeError("ffmpeg not found: install it (winget install Gyan.FFmpeg) and restart Convert")
+    n_audio, subs = _probe(ffmpeg, src)
+    video = kind == "video" and fmt.id != "gif"
+    uses_audio = kind == "audio" or (video and opts["keep_audio"])
+    track = opts["audio_track"] if uses_audio else 1  # the gif options have none
+    if uses_audio and track > max(n_audio, 1):
+        raise RuntimeError(f"audio track {track} not found: the file has {n_audio}")
+    out = []
+    if uses_audio and n_audio > 1:
+        out.append(f"{n_audio} audio tracks, only the first was kept" if track == 1
+                   else f"{n_audio} audio tracks, only track {track} was kept")
+    if video and subs:
+        if opts["subtitles"] and fmt.ext != "mkv" and BITMAP_SUBS & set(subs):
+            opts = {**opts, "subtitles": False}  # picture subtitles cannot be converted to text
+            out.append("picture subtitles cannot go in " + fmt.ext.upper() + ", they were dropped (MKV keeps them)")
+        elif not opts["subtitles"]:
+            out.append("subtitles were dropped")
     have = usable_encoders(ffmpeg) if kind == "video" else frozenset()
     rc, _, err = run(build_args(ffmpeg, src, dst, kind, fmt, opts, have), cancel)
     if rc:
         raise RuntimeError(f"ffmpeg failed: {err.strip().splitlines()[-1] if err.strip() else rc}")
-    return _lost(ffmpeg, src, kind, fmt, opts)
+    return "; ".join(out) or None

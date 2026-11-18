@@ -47,6 +47,17 @@ class FfmpegArgs(unittest.TestCase):
     def test_no_audio_option(self):
         self.assertIn("-an", args("video", "mkv", keep_audio=False))
 
+    def test_audio_track_is_mapped_by_number(self):
+        self.assertIn("0:a:1", args("audio", "mp3", audio_track=2))
+        self.assertIn("0:a:2?", args("video", "mp4", audio_track=3))
+        self.assertIn("0:a:0", args("audio", "mp3"))
+
+    def test_subtitles_codec_follows_the_container(self):
+        for fid, codec in (("mp4", "mov_text"), ("mov", "mov_text"), ("webm", "webvtt"), ("mkv", "copy")):
+            a = args("video", fid, subtitles=True)
+            self.assertEqual((a[a.index("0:s?") - 1], a[a.index("-c:s") + 1]), ("-map", codec), fid)
+        self.assertNotIn("-c:s", args("video", "mp4"))
+
     def test_gif_uses_palette(self):
         a = args("video", "gif")
         self.assertTrue(any("palettegen" in x for x in a))

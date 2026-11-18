@@ -48,8 +48,9 @@ OUTPUTS = {
 }
 
 DEFAULTS = {
-    "audio": {"bitrate": 192, "sample_rate": 0, "channels": 0, "bit_depth": 16},
-    "video": {"video_quality": "medium", "height": 0, "fps": 0, "keep_audio": True, "hw": True},
+    "audio": {"bitrate": 192, "sample_rate": 0, "channels": 0, "bit_depth": 16, "audio_track": 1},
+    "video": {"video_quality": "medium", "height": 0, "fps": 0, "keep_audio": True, "audio_track": 1, "subtitles": False,
+              "hw": True},
     "gif": {"width": 480, "fps": 12},
     "image": {"quality": 90, "max_size": 0},
     "doc": {"page": "A4"},

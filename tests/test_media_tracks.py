@@ -62,6 +62,48 @@ class Tracks(unittest.TestCase):
         self.conv(self.multi, "mp4")
         self.assertNotIn("audio tracks", " ".join(self.notes))
 
+    def streams(self, path):
+        _, _, err = run([FFMPEG, "-hide_banner", "-i", str(path)])
+        return err
+
+    def conv_out(self, src, fmt):
+        with tempfile.TemporaryDirectory() as t:
+            work = Path(t) / Path(src).name
+            work.write_bytes(Path(src).read_bytes())
+            (out,) = convert_file(work, fmt, self.opts, notes=self.notes)
+            return self.streams(out)
+
+    def test_second_audio_track_is_chosen(self):
+        self.opts["audio"]["audio_track"] = 2
+        self.conv(self.multi, "mp3")
+        self.assertTrue(any("only track 2" in n for n in self.notes), self.notes)
+
+    def test_missing_track_is_a_clear_error_and_nothing_is_written(self):
+        self.opts["audio"]["audio_track"] = 3
+        with tempfile.TemporaryDirectory() as t:
+            work = Path(t) / "multi.mkv"
+            work.write_bytes(self.multi.read_bytes())
+            with self.assertRaisesRegex(RuntimeError, "audio track 3 not found: the file has 2"):
+                convert_file(work, "mp3", self.opts, trash_original=True)
+            self.assertEqual([p.name for p in Path(t).iterdir()], ["multi.mkv"])
+        self.trash.assert_not_called()
+
+    def test_subtitles_kept_in_mp4_and_mkv(self):
+        self.opts["video"]["subtitles"] = True
+        for fmt in ("mp4", "mkv"):
+            self.notes.clear()
+            self.assertIn("Subtitle:", self.conv_out(self.multi, fmt), fmt)
+            self.assertNotIn("subtitles were dropped", " ".join(self.notes))
+
+    def test_picture_subtitles_are_dropped_with_a_warning_outside_mkv(self):
+        self.opts["video"]["subtitles"] = True
+        with mock.patch("convert_win.ffmpeg_conv._probe", return_value=(1, ["hdmv_pgs_subtitle"])):
+            self.assertNotIn("Subtitle:", self.conv_out(self.multi, "mp4"))
+        self.assertTrue(any("picture subtitles" in n for n in self.notes), self.notes)
+
+    def test_gif_needs_no_track_option(self):
+        self.assertIn("Video: gif", self.conv_out(self.multi, "gif"))
+
     def test_single_track_no_warning_and_original_trashed(self):
         self.conv(self.single, "mp3")
         self.assertEqual(self.notes, [])

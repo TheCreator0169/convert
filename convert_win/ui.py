@@ -25,12 +25,12 @@ PIPE = f"Convert-GUI-{getpass.getuser()}"
 MAX_MESSAGE = 1 << 20  # bytes accepted on the pipe
 CHOICES = {"video_quality": ["high", "medium", "low"], "page": ["A4", "Letter"], "height": [0, 2160, 1440, 1080, 720, 480],
            "channels": [0, 1, 2], "bit_depth": [16, 24], "dpi": [72, 150, 300],
-           "sample_rate": [0, 22050, 44100, 48000]}
+           "sample_rate": [0, 22050, 44100, 48000], "audio_track": [1, 2, 3, 4]}
 RANGE = {"bitrate": (32, 512), "fps": (0, 120), "width": (64, 3840), "quality": (1, 100), "max_size": (0, 16000)}
 LABEL = {"bitrate": "Bitrate (kbps)", "sample_rate": "Sample rate (Hz)", "channels": "Channels", "bit_depth": "Bit depth",
          "quality": "Quality (1-100)", "video_quality": "Quality", "height": "Max height", "fps": "Frame rate", "keep_audio": "Keep audio",
          "hw": "Hardware encoding", "width": "Width (px)", "max_size": "Max size (px)", "page": "Page size",
-         "dpi": "Resolution (dpi)"}
+         "dpi": "Resolution (dpi)", "audio_track": "Audio track", "subtitles": "Keep subtitles"}
 ZERO = {"sample_rate": "Keep", "channels": "Keep", "height": "Keep", "fps": "Keep", "max_size": "Keep",
         "bitrate": "", "width": ""}
 SUPPORTED = ("audio", "video", "image", "doc", "pdf")
