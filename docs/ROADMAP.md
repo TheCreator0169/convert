@@ -31,6 +31,16 @@ Every version ends the same way: tests first, all suites green, local commit, `b
 | v0.1.9 | Window behaviour (no restyle) | U7 remember size, position and last format; U8 keyboard; U9 accessibility; U10 Add files, Reset options; U12 ffmpeg-missing helper | use the window with the keyboard only |
 | v0.2.0 | Window look | U1, U2, U4, U5, U6, U11. Before any code: I list each element with position, size, colour, alignment and wait for your OK | **you look at it** (I cannot judge looks) |
 
+### Added from your feedback (2026-11-18): planned only, nothing built
+
+| For | Item | Detail |
+|---|---|---|
+| v0.1.8 installer | **Compact installer window** | Much smaller window: today there is a lot of empty space. Default view shows only the essentials (progress, one status line). A **Show details** link expands a terminal-style log (files being copied, registry entries written) with a drop-down animation; collapsed by default. Inno Setup has no such page built in, so this is the one item that may need a custom wizard page (Pascal script) or a small helper window; I will say which before building. Same ordinary install, same files, same uninstall. |
+| v0.2.0 window | **Smaller drop zone** | The "drop files here" area is too big. Shrink it to a compact strip; once files are added it shrinks further or turns into the file list. Exact size, position and colour go in the element list you approve first. |
+| v0.2.0 window | **Layout inspired by the macOS app** (reference only, not copied) | From its README: a small window that shows only the output formats that fit the chosen files; one **Convert** button; **Advanced** collapsed by default, settings remembered per format; one progress bar for the whole batch; a "Move original to Trash" checkbox; an **Install** button for the right-click entry (also in a menu). I will turn this into a proposed layout (element list with position, size, colour, alignment) and a mock image for you to accept, change or reject before any code. |
+
+Order stays: your review of the mock before v0.2.0 starts; then you test the new window and tell me what to change.
+
 Order rationale: data quality first (a bad conversion is worse than an ugly window), then safety nets, then installer, then the window, so the window work lands on a tested base.
 Decisions still open (defaults apply): D2 update check = not built, D3 ffmpeg bundling = external, D4 signing = none (README says so), D5 light theme = follow Windows, D6 CI = yes, D7 reflog cleanup = ask first.
 
