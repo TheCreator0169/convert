@@ -1,4 +1,5 @@
 """Explorer right-click entry: HKCU verbs under SystemFileAssociations, one per supported extension. No admin."""
+import ctypes
 import sys
 import winreg
 from pathlib import Path
@@ -16,6 +17,11 @@ def command():
     return f'"{pyw}" "{ROOT / "convert.pyw"}" "%1"', str(pyw)
 
 
+def _notify():
+    """Explorer caches verbs per file type: without this a running Explorer shows the change only after a restart."""
+    ctypes.windll.shell32.SHChangeNotify(0x08000000, 0, None, None)  # SHCNE_ASSOCCHANGED
+
+
 def _verb(base, ext):
     return rf"{base}\SystemFileAssociations\.{ext}\shell\Convert"
 
@@ -28,6 +34,7 @@ def install(base=BASE, cmd=None, icon=None):
             winreg.SetValueEx(k, "Icon", 0, winreg.REG_SZ, f"{icon},0")
         with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, _verb(base, ext) + r"\command", 0, winreg.KEY_WRITE) as k:
             winreg.SetValueEx(k, "", 0, winreg.REG_SZ, cmd)
+    _notify()
 
 
 def _delete(path):
@@ -46,6 +53,7 @@ def uninstall(base=BASE):
         if _delete(verb):
             _delete(verb.rsplit("\\", 1)[0])
             _delete(verb.rsplit("\\", 2)[0])
+    _notify()
 
 
 def installed(base=BASE):
