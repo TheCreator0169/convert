@@ -1,0 +1,10 @@
+PySide6
+Pillow
+pillow-heif
+pillow-avif-plugin
+PyMuPDF
+python-docx
+striprtf
+odfpy
+send2trash
+pyinstaller

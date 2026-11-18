@@ -1,0 +1,78 @@
+import os
+import tempfile
+import unittest
+from pathlib import Path
+
+from PIL import Image
+from PySide6.QtWidgets import QApplication
+
+from convert_win import ui
+
+_tmp = tempfile.TemporaryDirectory()
+app = None
+
+
+def setUpModule():
+    # Offscreen has no fonts (PDFs come out empty), so it is set here, not at import: other suites keep the real platform.
+    global app
+    os.environ["QT_QPA_PLATFORM"] = "offscreen"
+    os.environ["APPDATA"] = os.environ["LOCALAPPDATA"] = _tmp.name  # settings never touch the real profile
+    app = QApplication.instance() or QApplication([])
+
+
+class UiSmoke(unittest.TestCase):
+    def setUp(self):
+        self.dir = Path(tempfile.mkdtemp(dir=_tmp.name))
+        self.png = self.dir / "a.png"
+        Image.new("RGB", (40, 30), "blue").save(self.png)
+        self.win = ui.Window()
+
+    def test_empty_state(self):
+        self.assertEqual(self.win.fmt.count(), 0)
+        self.assertFalse(self.win.go.isEnabled())
+
+    def test_files_fill_formats_and_options(self):
+        self.win.add_files([self.png])
+        self.assertGreater(self.win.fmt.count(), 0)
+        self.assertTrue(self.win.go.isEnabled())
+        self.assertIn("quality", self.win.opt_widgets)
+
+    def test_non_files_and_unsupported_ignored(self):
+        exe = self.dir / "x.exe"
+        exe.touch()
+        self.win.add_files([exe, self.dir / "nope.png", self.dir])
+        self.assertEqual(self.win.files, [])
+
+    def test_mixed_kinds_offer_nothing(self):
+        wav = self.dir / "a.wav"
+        wav.touch()
+        self.win.add_files([self.png, wav])
+        self.assertEqual(self.win.fmt.count(), 0)
+
+    def test_convert_end_to_end_and_options_saved(self):
+        self.win.add_files([self.png])
+        self.win.fmt.setCurrentIndex(self.win.fmt.findData("webp"))
+        self.win.opt_widgets["quality"].setValue(55)
+        self.win._start()
+        self.win.worker.wait(10000)
+        app.processEvents()
+        self.assertTrue((self.dir / "a.webp").exists())
+        self.assertIn("Done", self.win.msg.text())
+        self.assertEqual(ui.settings.load()["options"]["image"]["quality"], 55)
+
+    def test_failure_is_reported_not_raised(self):
+        bad = self.dir / "bad.png"
+        bad.write_bytes(b"x")
+        self.win.add_files([bad])
+        self.win.fmt.setCurrentIndex(self.win.fmt.findData("jpg"))
+        self.win._start()
+        self.win.worker.wait(10000)
+        app.processEvents()
+        self.assertIn("failed", self.win.msg.text())
+
+    def test_pipe_message_adds_files(self):
+        self.assertFalse(ui._forward([str(self.png)]))  # nothing listening: first instance
+
+
+if __name__ == "__main__":
+    unittest.main()

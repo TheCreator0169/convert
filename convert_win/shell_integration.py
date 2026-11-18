@@ -1,0 +1,56 @@
+"""Explorer right-click entry: HKCU verbs under SystemFileAssociations, one per supported extension. No admin."""
+import sys
+import winreg
+from pathlib import Path
+
+from .formats import EXT_TYPE
+
+BASE = r"Software\Classes"
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def command():
+    if getattr(sys, "frozen", False):
+        return f'"{sys.executable}" "%1"', sys.executable
+    pyw = Path(sys.executable).with_name("pythonw.exe")
+    return f'"{pyw}" "{ROOT / "convert.pyw"}" "%1"', str(pyw)
+
+
+def _verb(base, ext):
+    return rf"{base}\SystemFileAssociations\.{ext}\shell\Convert"
+
+
+def install(base=BASE, cmd=None, icon=None):
+    cmd, icon = (cmd, icon or sys.executable) if cmd else command()
+    for ext in EXT_TYPE:
+        with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, _verb(base, ext), 0, winreg.KEY_WRITE) as k:
+            winreg.SetValueEx(k, "", 0, winreg.REG_SZ, "Convert")
+            winreg.SetValueEx(k, "Icon", 0, winreg.REG_SZ, f"{icon},0")
+        with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, _verb(base, ext) + r"\command", 0, winreg.KEY_WRITE) as k:
+            winreg.SetValueEx(k, "", 0, winreg.REG_SZ, cmd)
+
+
+def _delete(path):
+    try:
+        winreg.DeleteKey(winreg.HKEY_CURRENT_USER, path)
+        return True
+    except OSError:  # missing, or still holds someone else's keys: leave it
+        return False
+
+
+def uninstall(base=BASE):
+    """Removes only what install wrote; shell/.ext containers go only if they ended up empty."""
+    for ext in EXT_TYPE:
+        verb = _verb(base, ext)
+        _delete(verb + r"\command")
+        if _delete(verb):
+            _delete(verb.rsplit("\\", 1)[0])
+            _delete(verb.rsplit("\\", 2)[0])
+
+
+def installed(base=BASE):
+    try:
+        winreg.CloseKey(winreg.OpenKey(winreg.HKEY_CURRENT_USER, _verb(base, "mp3") + r"\command"))
+        return True
+    except OSError:
+        return False

@@ -1,0 +1,10 @@
+.venv-win/
+__pycache__/
+*.pyc
+build/
+dist/
+archives/
+*.spec.bak
+.env
+.env.*
+Convert.spec
