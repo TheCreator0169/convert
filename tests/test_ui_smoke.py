@@ -2,6 +2,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from PIL import Image
 from PySide6.QtWidgets import QApplication
@@ -22,6 +23,11 @@ def setUpModule():
 
 class UiSmoke(unittest.TestCase):
     def setUp(self):
+        # A fresh settings folder per test: a last_format saved by one test must not reach the next Window().
+        fresh = tempfile.mkdtemp(dir=_tmp.name)
+        env = mock.patch.dict(os.environ, {"APPDATA": fresh, "LOCALAPPDATA": fresh})
+        env.start()
+        self.addCleanup(env.stop)
         self.dir = Path(tempfile.mkdtemp(dir=_tmp.name))
         self.png = self.dir / "a.png"
         Image.new("RGB", (40, 30), "blue").save(self.png)
@@ -194,6 +200,8 @@ class UiSmoke(unittest.TestCase):
         exe.touch()
         self.win.add_files([exe, self.dir / "nope.png", self.dir])
         self.assertEqual(self.win.files, [])
+        self.assertEqual(self.win.msg.text(),
+                         f"Skipped (not a supported file type): x.exe, nope.png, {self.dir.name}")
 
     def test_video_file_offers_mp3_with_audio_options(self):
         mp4 = self.dir / "a.mp4"

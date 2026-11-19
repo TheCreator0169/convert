@@ -12,6 +12,7 @@ def stylesheet(p=PALETTE, chevron="", chevron_up=""):
     QListWidget, QComboBox, QSpinBox, QGroupBox {{ background: {p['panel']}; border: 1px solid {p['border']};
         border-radius: 6px; padding: 4px; }}
     QListWidget#drop {{ border: 1px dashed {p['border']}; }}
+    QListWidget#drop[drag="true"] {{ border: 2px dashed {p['accent']}; }}
     QListWidget#drop QScrollBar:vertical {{ background: transparent; width: 8px; margin: 2px; }}
     QListWidget#drop QScrollBar::handle:vertical {{ background: {p['border']}; border-radius: 4px; min-height: 24px; }}
     QListWidget#drop QScrollBar::add-line:vertical, QListWidget#drop QScrollBar::sub-line:vertical {{ height: 0; }}

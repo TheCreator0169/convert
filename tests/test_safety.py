@@ -198,7 +198,7 @@ class SettingsSafety(unittest.TestCase):
     def test_non_object_json(self):  # S5
         for raw in ("[]", "3", "null", "{bad"):
             self.write(raw)
-            self.assertEqual(settings.load(), {"trash_originals": False, "options": DEFAULTS,
+            self.assertEqual(settings.load(), {"trash_originals": False, "options": DEFAULTS, "last_format": {},
                                                 "update_check": True, "last_update_check": 0})
 
     def test_options_not_an_object(self):  # S5

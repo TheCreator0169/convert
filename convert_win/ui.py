@@ -11,15 +11,15 @@ import webbrowser
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QObject, QRect, QRectF, QSize, QThread, QTimer, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QPen
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QKeySequence, QPainter, QPen, QShortcut
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QFormLayout, QGridLayout, QGroupBox,
-                               QHBoxLayout, QLabel, QLayout, QListView, QListWidget, QListWidgetItem, QProgressBar, QPushButton,
-                               QSpinBox, QStyle, QStyledItemDelegate, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QFileDialog, QFormLayout, QGridLayout,
+                               QGroupBox, QHBoxLayout, QLabel, QLayout, QLineEdit, QListView, QListWidget, QListWidgetItem,
+                               QProgressBar, QPushButton, QSpinBox, QStyle, QStyledItemDelegate, QVBoxLayout, QWidget)
 
 from . import settings, theme, update_check
 from .converter import _is_network_path, convert_file, describe, scrub
-from .formats import DEFAULTS, file_type, option_key, outputs_for, output_fmt
+from .formats import DEFAULTS, file_type, option_key, outputs_for, output_fmt, picker_filter, selection_type
 from .process import Cancelled, find_tool
 from .version import CONVERT_VERSION
 
@@ -107,6 +107,12 @@ GRID = QSize(94, 70)   # tile plus 3 px around it
 PER_ROW, MAX_ROWS = 4, 3
 
 
+def _close_rect(cell):
+    """The × of a tile: 16x16, 8 px from the tile's top and right edges. `cell` is the item's rect (the tile is it inset by 3 px)."""
+    r = cell.adjusted(3, 3, -3, -3)
+    return QRect(r.left() + r.width() - 24, r.top() + 8, 16, 16)
+
+
 class TileDelegate(QStyledItemDelegate):
     def sizeHint(self, option, index):
         return TILE
@@ -114,7 +120,7 @@ class TileDelegate(QStyledItemDelegate):
     def paint(self, p, option, index):
         pal = theme.PALETTE
         r = option.rect.adjusted(3, 3, -3, -3)
-        hot = bool(option.state & QStyle.State_MouseOver)
+        hot = bool(option.state & (QStyle.State_MouseOver | QStyle.State_Selected))
         p.save()
         p.setRenderHint(QPainter.Antialiasing)
         p.setBrush(QColor(pal["tile"]))
@@ -131,7 +137,17 @@ class TileDelegate(QStyledItemDelegate):
         p.drawRoundedRect(badge, 4, 4)
         p.setPen(QColor(pal["accent_text"]))
         p.drawText(badge, Qt.AlignCenter, kind)
+        close = _close_rect(option.rect)
+        x_hot = self.parent().close_hot == index.row()
+        if x_hot:
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(pal["border"]))
+            p.drawRoundedRect(close, 4, 4)
+        p.setPen(QColor(pal["error"] if x_hot else pal["muted"]))
+        font.setPixelSize(12)
         font.setBold(False)
+        p.setFont(font)
+        p.drawText(close, Qt.AlignCenter, "×")
         font.setPixelSize(11)
         p.setFont(font)
         p.setPen(QColor(pal["text"]))
@@ -142,6 +158,8 @@ class TileDelegate(QStyledItemDelegate):
 
 class DropBox(QListWidget):
     """The file list as tiles that wrap like text. While it is empty, a hint sits in the middle of it."""
+    remove_requested = Signal(int)  # the × of a tile was clicked, or Delete on the selected tile
+
     def __init__(self, hint_text):
         super().__init__()
         self.setObjectName("drop")
@@ -150,7 +168,10 @@ class DropBox(QListWidget):
         self.setWrapping(True)
         self.setResizeMode(QListView.Adjust)
         self.setMovement(QListView.Static)
-        self.setSelectionMode(QAbstractItemView.NoSelection)
+        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.setMouseTracking(True)
+        self.viewport().setMouseTracking(True)  # the × turns hot under the pointer without a click
+        self.close_hot = -1  # row whose × the pointer is over
         self.setGridSize(GRID)
         self.setSpacing(0)
         self.setItemDelegate(TileDelegate(self))
@@ -166,6 +187,46 @@ class DropBox(QListWidget):
     def resizeEvent(self, e):
         super().resizeEvent(e)
         self.hint.setGeometry(16, 8, self.width() - 32, self.height() - 16)
+
+    def _close_at(self, pos):
+        """Row of the tile whose × is under `pos` (viewport coordinates), else -1."""
+        idx = self.indexAt(pos)
+        if idx.isValid() and _close_rect(self.visualRect(idx)).contains(pos):
+            return idx.row()
+        return -1
+
+    def _set_hot(self, row):
+        if row != self.close_hot:
+            self.close_hot = row
+            self.viewport().update()
+
+    def mouseMoveEvent(self, e):
+        self._set_hot(self._close_at(e.position().toPoint()))
+        super().mouseMoveEvent(e)
+
+    def mousePressEvent(self, e):
+        row = self._close_at(e.position().toPoint()) if e.button() == Qt.LeftButton else -1
+        if row >= 0:
+            self.remove_requested.emit(row)  # the click removes the tile and does not also select it
+            return
+        super().mousePressEvent(e)
+
+    def mouseDoubleClickEvent(self, e):
+        if self._close_at(e.position().toPoint()) >= 0:
+            return  # a fast second click on the × must not remove the next tile too
+        super().mouseDoubleClickEvent(e)
+
+    def viewportEvent(self, e):
+        if e.type() == QEvent.Leave:
+            self._set_hot(-1)
+        return super().viewportEvent(e)
+
+    def keyPressEvent(self, e):
+        sel = self.selectedIndexes()  # the selected tile, not the "current" one (which stays after a click on empty space)
+        if e.key() == Qt.Key_Delete and sel:
+            self.remove_requested.emit(sel[0].row())
+            return
+        super().keyPressEvent(e)
 
 
 def _choice_text(key, c):
@@ -214,7 +275,13 @@ class Window(QWidget):
         self.opt_widgets = {}
 
         self.list = DropBox("Drop files here, or right-click files in Explorer and choose Convert.")
+        self.list.remove_requested.connect(self._remove)
         self.hint = self.list.hint
+        self.add = QPushButton("Add files")
+        self.add.setToolTip("Add files (Ctrl+O)")
+        self.add.clicked.connect(self._pick)
+        self.add.ensurePolished()  # the stylesheet font and padding are known before the width is measured
+        self.add.setFixedSize(max(80, self.add.fontMetrics().horizontalAdvance("Add files") + 32), 31)  # 80 px, or text + padding
         self.fmt = QComboBox()
         self.fmt.setObjectName("fmt")
         self.fmt.setPlaceholderText("Add files first")
@@ -275,6 +342,7 @@ class Window(QWidget):
         lay = QVBoxLayout(self)
         lay.addWidget(self.update_notice)
         lay.addWidget(self.list)
+        lay.addWidget(self.add, 0, Qt.AlignLeft)
         lay.addWidget(QLabel("Convert to"))
         lay.addWidget(self.fmt)
         lay.addWidget(self.adv)
@@ -284,6 +352,13 @@ class Window(QWidget):
         lay.addLayout(row)
         lay.setContentsMargins(11, 11, 11, 11)
         lay.setSizeConstraint(QLayout.SetFixedSize)  # 440 px wide (the box is 418 px), as high as its content, always
+        self.shortcuts = []  # kept alive here; the window is their parent anyway
+        for seq, slot in ((Qt.Key_Return, self._enter), (Qt.Key_Enter, self._enter), (Qt.Key_Escape, self._escape),
+                          ("Ctrl+O", self._pick)):
+            sc = QShortcut(QKeySequence(seq), self)
+            sc.setContext(Qt.WindowShortcut)
+            sc.activated.connect(slot)
+            self.shortcuts.append(sc)
         self._refresh()
 
     def start_update_check(self):
@@ -314,24 +389,68 @@ class Window(QWidget):
             self.msg.setText("New files will be added when the current batch ends.")
             return
         before = len(self.files)
+        skipped = []
         for p in paths:
             p = str(Path(p))
-            if not _is_network_path(p) and Path(p).is_file() and file_type(p) in SUPPORTED and p not in self.files:
+            ok = not _is_network_path(p) and Path(p).is_file() and file_type(p) in SUPPORTED
+            if not ok:
+                skipped.append(Path(p).name or p)
+            elif p not in self.files:
                 self.files.append(p)
         if len(self.files) > before:
             self._reset_bar()  # a new batch: the bar of the last one is stale
         self._refresh()
+        if skipped and not self.msg.text():  # the ffmpeg and mixed-kinds messages come first
+            names = ", ".join(skipped[:3]) + (", ..." if len(skipped) > 3 else "")
+            self._say(f"Skipped (not a supported file type): {names}", "muted")
 
     def _reset_bar(self):
         self.bar.setRange(0, 1)
         self.bar.setValue(0)
 
+    def _pick(self):
+        paths, _ = QFileDialog.getOpenFileNames(self, "Add files", "", picker_filter())
+        if paths:
+            self.add_files(paths)
+
+    def _drag(self, on):
+        """The drop box shows a dashed accent border while a drag with files is over the window."""
+        self.list.setProperty("drag", on)
+        self.list.style().unpolish(self.list)
+        self.list.style().polish(self.list)
+
     def dragEnterEvent(self, e):
         if e.mimeData().hasUrls():
             e.acceptProposedAction()
+            self._drag(True)
+
+    def dragLeaveEvent(self, e):
+        self._drag(False)
 
     def dropEvent(self, e):
+        self._drag(False)
         self.add_files(u.toLocalFile() for u in e.mimeData().urls())
+
+    def _remove(self, row):
+        """Drops one file. Blocked while a batch runs. The selection moves to the same index, or the previous tile."""
+        if self.worker or not 0 <= row < len(self.files):
+            return
+        fid = self.fmt.currentData()  # the format chosen now stays, if the rest still offers it
+        del self.files[row]
+        self._refresh(keep=fid)
+        if self.files:
+            self.list.setCurrentRow(min(row, len(self.files) - 1))
+
+    def _enter(self):
+        """Enter = Convert, unless a list popup is open or a field (spin box, combo box, text) has the focus."""
+        if QApplication.activePopupWidget() or isinstance(QApplication.focusWidget(), (QSpinBox, QComboBox, QLineEdit)):
+            return
+        if self.go.isEnabled() and not self.worker:
+            self._start()
+
+    def _escape(self):
+        if self.worker and not self.stop.isHidden():
+            self._cancel()
 
     def _clear(self):
         self.files, self.outs = [], []
@@ -341,8 +460,10 @@ class Window(QWidget):
     def _missing_ffmpeg(self):
         return any(file_type(f) in ("audio", "video") for f in self.files) and not find_tool("ffmpeg")
 
-    def _refresh(self):
+    def _refresh(self, keep=None):
+        """Rebuilds the list and the format choice. `keep`: the format to keep if still offered (after a removal)."""
         self.list.clear()
+        self.list.close_hot = -1  # the pointer may be over a different tile now
         for f in self.files:
             item = QListWidgetItem(Path(f).name)
             item.setData(Qt.UserRole, (Path(f).suffix[1:5] or "FILE").upper())
@@ -365,8 +486,12 @@ class Window(QWidget):
                 self.msg.setText("These files cannot be converted together: pick files of one kind.")
         self.msg.style().unpolish(self.msg)
         self.msg.style().polish(self.msg)
-        if self.fmt.count():
-            self.fmt.setCurrentIndex(0)  # with a placeholder text Qt no longer selects the first item by itself
+        if self.fmt.count():  # with a placeholder text Qt no longer selects the first item by itself
+            saved = self.st["last_format"].get(selection_type(self.files))  # the format last used for this type of file
+            idx = self.fmt.findData(keep) if keep else -1
+            if idx < 0 and saved:
+                idx = self.fmt.findData(saved)
+            self.fmt.setCurrentIndex(max(idx, 0))  # index 0 when neither is offered; the saved value itself is not changed
         self.fmt.blockSignals(False)
         self.fmt.setProperty("empty", not self.fmt.count())  # grey placeholder while there is nothing to pick
         self.fmt.style().unpolish(self.fmt)
@@ -426,6 +551,8 @@ class Window(QWidget):
         group = self._group()
         self.st["options"][group] = self._collect()
         self.st["trash_originals"] = self.trash.isChecked()
+        self.st["last_format"][selection_type(self.files)] = self.fmt.currentData()  # remembered per file type
+        self._say("", "muted")  # a skipped-files or other old message does not stay during the run
         try:
             settings.save(self.st)
         except OSError as e:  # the conversion still runs; the status line shows it after the first file

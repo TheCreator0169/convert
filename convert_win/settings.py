@@ -8,7 +8,7 @@ import time
 from datetime import date
 from pathlib import Path
 
-from .formats import DEFAULTS
+from .formats import DEFAULTS, OUTPUTS
 
 
 LOG_DAYS = 14
@@ -49,6 +49,19 @@ def _valid(group, key, val, default):
     return val
 
 
+def _last_formats(saved):
+    """Last output format per file type; an id is kept only if that type offers it (video also takes audio ids)."""
+    raw = saved.get("last_format")
+    if not isinstance(raw, dict):
+        return {}
+    out = {}
+    for t, fid in raw.items():
+        offered = OUTPUTS.get(t, {}).keys() | (OUTPUTS["audio"].keys() if t == "video" else set())
+        if isinstance(fid, str) and fid in offered:
+            out[t] = fid
+    return out
+
+
 def load():
     try:
         saved = json.loads((_dir("APPDATA") / "settings.json").read_text("utf-8-sig"))
@@ -62,7 +75,7 @@ def load():
         mine = saved_opts.get(group) if isinstance(saved_opts.get(group), dict) else {}
         options[group] = {k: _valid(group, k, _coerce(mine.get(k, d), d), d) for k, d in defaults.items()}
     last = saved.get("last_update_check")
-    return {"trash_originals": saved.get("trash_originals") is True, "options": options,
+    return {"trash_originals": saved.get("trash_originals") is True, "options": options, "last_format": _last_formats(saved),
             "update_check": saved.get("update_check", True) is True,  # on when absent; any other value than true means off
             "last_update_check": last if isinstance(last, (int, float)) and not isinstance(last, bool) and math.isfinite(last) else 0}
 

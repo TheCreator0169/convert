@@ -63,6 +63,19 @@ def file_type(path):
     return EXT_TYPE.get(Path(path).suffix.lower().lstrip("."))
 
 
+def picker_filter():
+    """The file dialog filter: one entry with every supported input extension."""
+    return "Supported files (" + " ".join(f"*.{e}" for e in EXT_TYPE) + ")"
+
+
+def selection_type(paths):
+    """The type that keys the remembered format: audio when the selection mixes audio and video, else the one type, else None."""
+    types = {file_type(p) for p in paths}
+    if types == {"audio", "video"}:
+        return "audio"
+    return types.pop() if len(types) == 1 else None
+
+
 def outputs_for(paths):
     """Output formats valid for the whole selection; audio and video can be mixed (audio targets)."""
     types = {file_type(p) for p in paths}
