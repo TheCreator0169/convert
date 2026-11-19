@@ -7,7 +7,8 @@ from convert_win import process
 
 class Process(unittest.TestCase):
     def test_run_captures_output(self):
-        rc, out, _ = process.run([sys.executable, "-c", "print('héllo')"])
+        # bytes, not print(): the child's console encoding differs between machines (cp1252 on a CI runner)
+        rc, out, _ = process.run([sys.executable, "-c", "import sys;sys.stdout.buffer.write('h\\u00e9llo'.encode('utf-8'))"])
         self.assertEqual((rc, out.strip()), (0, "héllo"))
 
     def test_nonzero_exit_and_stderr(self):

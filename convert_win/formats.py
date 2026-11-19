@@ -1,4 +1,5 @@
 """File type detection, output formats and option defaults. The only place that lists formats."""
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -101,9 +102,12 @@ def unique_path(src, ext, tag=""):
     out = src.with_name(f"{stem}.{ext}")
     n = 2
     while True:
-        try:
-            with open(out, "xb"):
-                return out
-        except FileExistsError:
-            out = src.with_name(f"{stem} {n}.{ext}")
-            n += 1
+        # lexists is True for a dangling link too: on Windows "xb" would follow it and create the file it points to
+        if not os.path.lexists(out):
+            try:
+                with open(out, "xb"):
+                    return out
+            except FileExistsError:
+                pass
+        out = src.with_name(f"{stem} {n}.{ext}")
+        n += 1
