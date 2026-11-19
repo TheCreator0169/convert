@@ -132,3 +132,13 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 - Tests in source mode: 166, 1 skipped, all pass. Frozen smoke test inside the build passed; `chevron.png` is in the frozen bundle.
 - Measured by grabbing the real window (native platform, 440 px): empty 314 px high, 1 file 406, 5 files 454, 13 files 524, with Advanced open 556.
 - Not verified: how it looks on the user's screen (DPI scaling above 100% may widen the window), the frozen window itself, the install and upgrade round trip with this setup (installer script unchanged since v0.1.10), hardware encoders, SmartScreen.
+
+## v0.1.12 (2026-11-19, not tagged, not published)
+
+- Commit `5ae128e`, then the history. Built with `build.ps1 v0.1.12`. Fixes from the user's test of v0.1.11.
+- Convert.exe sha256 `de30c47866dc4c27a54854e4ab06d55b25132b6f8cb47a4f251d774088e1aa9e`.
+- Convert-Setup-v0.1.12.exe sha256 `007f49b815aebcab6ef99bba8a8b064ec5b8b53f3ec71013987b131c66bf4e0d`.
+- Fixed: switching Advanced on and off made the option names vanish (only the fields are hidden now, the names stay as a preview); the progress bar stayed full blue after a finished batch (it goes back to empty on Clear and when new files are added).
+- Tests in source mode: 170, 1 skipped, all pass; the two new ones fail on the previous ui.py. Frozen smoke test inside the build passed.
+- Measured on the real window: Advanced off, on, off again: 387, 433, 387 px high, names visible in the first and last; after Clear the window is 291 px and the bar value 0.
+- Not verified: how it looks on the user's screen, the frozen window itself, install and upgrade with this setup.
