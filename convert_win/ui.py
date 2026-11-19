@@ -159,10 +159,13 @@ class TileDelegate(QStyledItemDelegate):
 class DropBox(QListWidget):
     """The file list as tiles that wrap like text. While it is empty, a hint sits in the middle of it."""
     remove_requested = Signal(int)  # the × of a tile was clicked, or Delete on the selected tile
+    add_requested = Signal()  # a left click on empty space (no tile, no ×): the file picker opens
 
     def __init__(self, hint_text):
         super().__init__()
         self.setObjectName("drop")
+        self.setToolTip("Click to add files (Ctrl+O)")  # shown on empty space; a tile shows its own path
+        self._empty_press = False  # the left button went down on empty space
         self.setViewMode(QListView.IconMode)
         self.setFlow(QListView.LeftToRight)
         self.setWrapping(True)
@@ -171,6 +174,7 @@ class DropBox(QListWidget):
         self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.setMouseTracking(True)
         self.viewport().setMouseTracking(True)  # the × turns hot under the pointer without a click
+        self.viewport().setCursor(Qt.PointingHandCursor)  # empty space; over a tile it is the arrow
         self.close_hot = -1  # row whose × the pointer is over
         self.setGridSize(GRID)
         self.setSpacing(0)
@@ -200,20 +204,40 @@ class DropBox(QListWidget):
             self.close_hot = row
             self.viewport().update()
 
+    def _empty_at(self, pos):
+        """True on the viewport where no tile is (viewport coordinates)."""
+        return self.viewport().rect().contains(pos) and not self.indexAt(pos).isValid()
+
     def mouseMoveEvent(self, e):
-        self._set_hot(self._close_at(e.position().toPoint()))
+        pos = e.position().toPoint()
+        self._set_hot(self._close_at(pos))
+        self.viewport().setCursor(Qt.PointingHandCursor if self._empty_at(pos) else Qt.ArrowCursor)
         super().mouseMoveEvent(e)
 
     def mousePressEvent(self, e):
-        row = self._close_at(e.position().toPoint()) if e.button() == Qt.LeftButton else -1
+        pos = e.position().toPoint()
+        row = self._close_at(pos) if e.button() == Qt.LeftButton else -1
         if row >= 0:
             self.remove_requested.emit(row)  # the click removes the tile and does not also select it
             return
+        self._empty_press = e.button() == Qt.LeftButton and self._empty_at(pos)
         super().mousePressEvent(e)
 
+    def mouseReleaseEvent(self, e):
+        # The picker opens on release, and only when the press also began on empty space: a drag that ends there does not.
+        opened = self._empty_press and e.button() == Qt.LeftButton and self._empty_at(e.position().toPoint())
+        self._empty_press = False
+        super().mouseReleaseEvent(e)
+        if opened:
+            self.add_requested.emit()
+
     def mouseDoubleClickEvent(self, e):
-        if self._close_at(e.position().toPoint()) >= 0:
+        pos = e.position().toPoint()
+        if self._close_at(pos) >= 0:
             return  # a fast second click on the × must not remove the next tile too
+        if self._empty_at(pos):
+            self._empty_press = False  # the first click already opened the picker: the second one does nothing
+            return
         super().mouseDoubleClickEvent(e)
 
     def viewportEvent(self, e):
@@ -276,12 +300,8 @@ class Window(QWidget):
 
         self.list = DropBox("Drop files here, or right-click files in Explorer and choose Convert.")
         self.list.remove_requested.connect(self._remove)
+        self.list.add_requested.connect(self._pick)
         self.hint = self.list.hint
-        self.add = QPushButton("Add files")
-        self.add.setToolTip("Add files (Ctrl+O)")
-        self.add.clicked.connect(self._pick)
-        self.add.ensurePolished()  # the stylesheet font and padding are known before the width is measured
-        self.add.setFixedSize(max(80, self.add.fontMetrics().horizontalAdvance("Add files") + 32), 31)  # 80 px, or text + padding
         self.fmt = QComboBox()
         self.fmt.setObjectName("fmt")
         self.fmt.setPlaceholderText("Add files first")
@@ -342,7 +362,6 @@ class Window(QWidget):
         lay = QVBoxLayout(self)
         lay.addWidget(self.update_notice)
         lay.addWidget(self.list)
-        lay.addWidget(self.add, 0, Qt.AlignLeft)
         lay.addWidget(QLabel("Convert to"))
         lay.addWidget(self.fmt)
         lay.addWidget(self.adv)

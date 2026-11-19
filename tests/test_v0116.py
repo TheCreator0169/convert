@@ -1,4 +1,4 @@
-"""v0.1.16 window features: Add files, removing files, drag highlight, skipped-files message, shortcuts, last format.
+"""v0.1.16 window features: clickable drop box, removing files, drag highlight, skipped-files message, shortcuts, last format.
 
 Offscreen like test_ui_smoke. No real file dialog (QFileDialog.getOpenFileNames is mocked), no fixed sleeps.
 """
@@ -11,10 +11,10 @@ from types import SimpleNamespace
 from unittest import mock
 
 from PIL import Image
-from PySide6.QtCore import QMimeData, QPoint, QPointF, Qt, QUrl
-from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent, QKeySequence
+from PySide6.QtCore import QEvent, QMimeData, QPoint, QPointF, Qt, QUrl
+from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent, QKeySequence, QMouseEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QPushButton, QSpinBox
+from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QSpinBox
 
 from convert_win import settings, ui
 from convert_win.formats import INPUTS, picker_filter
@@ -95,47 +95,55 @@ class PickerFilter(unittest.TestCase):
         self.assertEqual(set(tokens), {f"*.{e}" for exts in INPUTS.values() for e in exts.split()})
 
 
-class AddButton(WindowCase):
-    def test_button_exists_with_tooltip_and_text(self):
-        self.assertIsInstance(self.win.add, QPushButton)
-        self.assertEqual(self.win.add.text(), "Add files")
-        self.assertIn("Ctrl+O", self.win.add.toolTip())
+class ClickableBox(WindowCase):
+    """v0.1.16 final: no Add files button. A left click on empty space in the drop box opens the picker."""
 
-    def test_button_is_always_enabled(self):
-        self.assertTrue(self.win.add.isEnabled())  # empty window
-        self.win.add_files(self.make(1))
-        self.assertTrue(self.win.add.isEnabled())
-        self.win.worker = SimpleNamespace()  # a batch running: files are queued, so the button stays on
-        self.win._refresh()
-        self.assertTrue(self.win.add.isEnabled())
-
-    def test_button_sits_under_the_drop_box_left_aligned(self):
+    def setUp(self):
+        super().setUp()
         self.show()
-        add = self.win.add
-        self.assertTrue(add.isVisible())
-        self.assertGreaterEqual(add.geometry().top(), self.win.list.geometry().bottom())
-        self.assertEqual(add.geometry().left(), self.win.list.geometry().left())  # left edge lines up with the box
-        self.assertLess(add.geometry().right(), self.win.list.geometry().center().x())  # not spread across the window
 
-    def test_click_opens_picker_and_adds_the_chosen_files(self):
-        self.show()
+    def vp(self):
+        return self.win.list.viewport()
+
+    def picker(self, returns=([], "")):
+        return mock.patch("convert_win.ui.QFileDialog.getOpenFileNames", return_value=returns)
+
+    def with_files(self, n):
+        self.win.add_files(self.make(n, "w"))
+        QApplication.processEvents()
+        self.assertEqual(len(self.win.files), n)
+
+    def empty_point(self):
+        """Bottom right of the box: the tiles fill from the top left, so this is empty space (checked)."""
+        p = QPoint(self.vp().width() - 6, self.vp().height() - 6)
+        self.assertFalse(self.win.list.indexAt(p).isValid(), "precondition: this point must be empty space")
+        return p
+
+    def move(self, pos):
+        return QMouseEvent(QEvent.MouseMove, QPointF(pos), QPointF(self.vp().mapToGlobal(pos)),
+                           Qt.NoButton, Qt.NoButton, Qt.NoModifier)
+
+    def test_no_add_button_in_the_window(self):
+        self.assertFalse(hasattr(self.win, "add"))
+        self.assertNotIn("Add files", [b.text() for b in self.win.findChildren(QPushButton)])
+
+    def test_click_on_empty_space_opens_picker_and_adds_the_chosen_files(self):
         chosen = self.make(2, "pick")
-        with mock.patch("convert_win.ui.QFileDialog.getOpenFileNames",
-                        return_value=([str(p) for p in chosen], "")) as dlg:
-            QTest.mouseClick(self.win.add, Qt.LeftButton)
+        with self.picker(([str(p) for p in chosen], "")) as dlg:
+            self.click_viewport(self.empty_point())
         dlg.assert_called_once()
         self.assertEqual(dlg.call_args.args[3], picker_filter())
         self.assertEqual(self.win.files, [str(p) for p in chosen])
 
     def test_cancelled_picker_adds_nothing(self):
-        with mock.patch("convert_win.ui.QFileDialog.getOpenFileNames", return_value=([], "")):
-            self.win._pick()
+        with self.picker(([], "")) as dlg:
+            self.click_viewport(self.empty_point())
+        dlg.assert_called_once()
         self.assertEqual(self.win.files, [])
 
     def test_ctrl_o_is_wired_to_the_picker(self):
         chosen = self.make(1, "k")
-        with mock.patch("convert_win.ui.QFileDialog.getOpenFileNames",
-                        return_value=([str(chosen[0])], "")) as dlg:
+        with self.picker(([str(chosen[0])], "")) as dlg:
             self.fire("Ctrl+O")
         dlg.assert_called_once()
         self.assertEqual(self.win.files, [str(chosen[0])])
@@ -143,9 +151,92 @@ class AddButton(WindowCase):
     def test_ctrl_o_key_press_opens_the_picker(self):
         if not self.show():
             self.skipTest("offscreen window never became active: the key press cannot reach the shortcut here")
-        with mock.patch("convert_win.ui.QFileDialog.getOpenFileNames", return_value=([], "")) as dlg:
+        with self.picker() as dlg:
             QTest.keyClick(self.win, Qt.Key_O, Qt.ControlModifier)
         dlg.assert_called_once()
+
+    def test_windows_double_click_on_empty_space_opens_the_picker_once(self):
+        p, vp = self.empty_point(), self.vp()
+        with self.picker() as dlg:
+            QTest.mousePress(vp, Qt.LeftButton, Qt.NoModifier, p)
+            QTest.mouseRelease(vp, Qt.LeftButton, Qt.NoModifier, p)
+            QApplication.sendEvent(vp, QMouseEvent(QEvent.MouseButtonDblClick, QPointF(p), QPointF(vp.mapToGlobal(p)),
+                                                   Qt.LeftButton, Qt.LeftButton, Qt.NoModifier))
+            QTest.mouseRelease(vp, Qt.LeftButton, Qt.NoModifier, p)
+        dlg.assert_called_once()
+
+    def test_press_on_empty_space_and_release_on_a_tile_opens_nothing(self):
+        self.with_files(2)
+        tile = self.tile(0).center()
+        with self.picker() as dlg:
+            QTest.mousePress(self.vp(), Qt.LeftButton, Qt.NoModifier, self.empty_point())
+            QTest.mouseRelease(self.vp(), Qt.LeftButton, Qt.NoModifier, tile)
+        dlg.assert_not_called()
+        self.assertEqual(len(self.win.files), 2)
+
+    def test_press_on_a_tile_and_release_on_empty_space_opens_nothing(self):
+        self.with_files(2)
+        with self.picker() as dlg:
+            QTest.mousePress(self.vp(), Qt.LeftButton, Qt.NoModifier, self.tile(0).center())
+            QTest.mouseRelease(self.vp(), Qt.LeftButton, Qt.NoModifier, self.empty_point())
+        dlg.assert_not_called()
+
+    def test_click_on_a_tile_selects_it_and_opens_nothing(self):
+        self.with_files(3)
+        with self.picker() as dlg:
+            self.click_viewport(self.tile(1).center())
+        dlg.assert_not_called()
+        self.assertEqual(self.win.list.currentRow(), 1)
+        self.assertEqual(len(self.win.files), 3)
+
+    def test_click_on_a_x_removes_the_file_and_opens_nothing(self):
+        self.with_files(3)
+        with self.picker() as dlg:
+            self.click_viewport(self.x_point(1))
+        dlg.assert_not_called()
+        self.assertEqual(len(self.win.files), 2)
+
+    def test_press_on_a_x_and_release_on_empty_space_removes_one_and_opens_nothing(self):
+        self.with_files(2)
+        with self.picker() as dlg:
+            QTest.mousePress(self.vp(), Qt.LeftButton, Qt.NoModifier, self.x_point(0))
+            QTest.mouseRelease(self.vp(), Qt.LeftButton, Qt.NoModifier, self.empty_point())
+        dlg.assert_not_called()
+        self.assertEqual(len(self.win.files), 1)  # the × press removed one file; the release did not open the picker
+
+    def test_click_on_empty_space_while_a_batch_runs_queues_the_chosen_files(self):
+        self.win.worker = object()  # a batch is running: the picker still opens, the files wait for the batch
+        chosen = self.make(1, "q")
+        with self.picker(([str(chosen[0])], "")) as dlg:
+            self.click_viewport(self.empty_point())
+        dlg.assert_called_once()
+        self.assertEqual(self.win.files, [])
+        self.assertEqual(self.win.pending, [str(chosen[0])])
+
+    def test_cursor_is_pointing_hand_on_empty_space_and_arrow_on_a_tile(self):
+        self.with_files(2)
+        self.assertEqual(self.vp().cursor().shape(), Qt.PointingHandCursor)  # the empty-box cursor from the start
+        self.win.list.mouseMoveEvent(self.move(self.empty_point()))
+        self.assertEqual(self.vp().cursor().shape(), Qt.PointingHandCursor)
+        self.win.list.mouseMoveEvent(self.move(self.tile(0).center()))
+        self.assertEqual(self.vp().cursor().shape(), Qt.ArrowCursor)
+        self.win.list.mouseMoveEvent(self.move(self.empty_point()))
+        self.assertEqual(self.vp().cursor().shape(), Qt.PointingHandCursor)
+
+    def test_tooltip_on_the_box_names_the_click_and_ctrl_o(self):
+        self.assertEqual(self.win.list.toolTip(), "Click to add files (Ctrl+O)")
+
+    def test_tile_tooltip_is_still_the_file_path(self):
+        self.with_files(1)
+        self.assertEqual(self.win.list.item(0).toolTip(), self.win.files[0])
+
+    def test_empty_box_is_110_high_and_the_form_follows_it_with_no_widget_between(self):
+        self.assertEqual(self.win.list.height(), 110)
+        lay = self.win.layout()
+        items = [lay.itemAt(i).widget() for i in range(lay.count())]
+        nxt = items[items.index(self.win.list) + 1]
+        self.assertIsInstance(nxt, QLabel)
+        self.assertEqual(nxt.text(), "Convert to")
 
 
 class RemoveOneFile(WindowCase):
