@@ -114,3 +114,11 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 - Real install round trip in the user's terminal (real HKCU), silent: v0.1.7 installed, then v0.1.8 over it, then v0.1.9 over that (a planted stale file in `_internal` was removed, right-click verb kept, no desktop shortcut), uninstall (entry, verb and app folder gone; the French "delete settings?" question appeared, user answered No), reinstall v0.1.9.
 - Frozen smoke test inside the build passed. Source tests: 164 passed on v0.1.8 (app code unchanged since).
 - Not verified: the installer pages in the window (license, language, shortcut box: user's eyes), the settings kept after uninstall, hardware encoders, SmartScreen (not signed). `/SUPPRESSMSGBOXES` does not hide the settings question.
+
+## v0.1.10 (2026-11-19, not tagged, not published)
+
+- Commit `(see git log)`: last page of the installer says whether ffmpeg is on PATH and gives `winget install Gyan.FFmpeg` when it is not (D3: ffmpeg stays external, nothing is downloaded). No change in the app.
+- Convert.exe sha256 `186834bb3e9b3ddb5f779588d6b496a86bbd5c7463b63f13ce2bc2c198483565`.
+- Convert-Setup-v0.1.10.exe sha256 `cddb181f4625de06a136a1481dbdc5b7b10b50b758101a765530716efccba183`.
+- Verified: the installer compiles, frozen smoke test inside the build passed.
+- Not verified: how the finish page looks (text may be cut off), the ffmpeg detection in a real wizard run, install and upgrade round trip with this setup.
