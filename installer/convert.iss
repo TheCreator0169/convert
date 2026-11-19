@@ -24,6 +24,10 @@ Compression=lzma2
 SolidCompression=yes
 CloseApplications=yes
 LicenseFile=..\LICENSE
+DisableWelcomePage=yes
+DisableDirPage=yes
+DisableReadyPage=yes
+WizardSizePercent=100
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -36,6 +40,10 @@ english.FfmpegFound=ffmpeg was found: audio and video conversion is available.
 french.FfmpegFound=ffmpeg a ete trouve : la conversion audio et video est disponible.
 english.FfmpegMissing=ffmpeg was not found. Images and documents work now; audio and video need ffmpeg. To install it, open a terminal and run: winget install Gyan.FFmpeg  (then restart Convert).
 french.FfmpegMissing=ffmpeg est introuvable. Les images et les documents fonctionnent; l'audio et la video demandent ffmpeg. Pour l'installer, ouvrez un terminal et lancez : winget install Gyan.FFmpeg  (puis relancez Convert).
+english.OpenConvert=Open Convert
+french.OpenConvert=Ouvrir Convert
+english.AppRunning=Convert is already running. Close it, then click OK to continue, or Cancel to quit.
+french.AppRunning=Convert est deja ouvert. Fermez-le, puis cliquez sur OK pour continuer, ou sur Annuler pour quitter.
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -54,7 +62,7 @@ Name: "{userdesktop}\Convert"; Filename: "{app}\Convert.exe"; Tasks: desktopicon
 [Run]
 ; Adds "Convert" to the Explorer right-click menu (HKCU only)
 Filename: "{app}\Convert.exe"; Parameters: "--install-menu"; Flags: runhidden
-Filename: "{app}\Convert.exe"; Description: "Open Convert"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\Convert.exe"; Description: "{cm:OpenConvert}"; Flags: postinstall nowait skipifsilent
 
 [UninstallRun]
 Filename: "{app}\Convert.exe"; Parameters: "--uninstall-menu"; Flags: runhidden; RunOnceId: "RemoveMenu"
@@ -64,6 +72,49 @@ Filename: "{app}\Convert.exe"; Parameters: "--uninstall-menu"; Flags: runhidden;
 Type: filesandordirs; Name: "{localappdata}\Convert"
 
 [Code]
+{ The app holds the mutex "Local\Convert-GUI-<login>" (convert_win\ui.py claim_first). Setup and the app share the session namespace,
+  so the unprefixed name and the Local\ name are the same object; both are checked. }
+function AppMutexNames(): String;
+var
+  User: String;
+begin
+  { Python's getpass.getuser() takes the first non-empty of LOGNAME, USER, LNAME, USERNAME; do the same, then the account name. }
+  User := GetEnv('LOGNAME');
+  if User = '' then User := GetEnv('USER');
+  if User = '' then User := GetEnv('LNAME');
+  if User = '' then User := GetEnv('USERNAME');
+  if User = '' then User := GetUserNameString;
+  Result := 'Convert-GUI-' + User + ',Local\Convert-GUI-' + User;
+end;
+
+{ True when Convert is running and the user clicked Cancel. Silent runs never block: CloseApplications handles the app. }
+function AppBlocks(Silent: Boolean): Boolean;
+var
+  Msg: String;
+begin
+  Result := False;
+  if Silent then Exit;
+  Msg := CustomMessage('AppRunning');
+  while CheckForMutexes(AppMutexNames()) do
+  begin
+    if MsgBox(Msg, mbError, MB_OKCANCEL) = IDCANCEL then
+    begin
+      Result := True;
+      Exit;
+    end;
+  end;
+end;
+
+function InitializeSetup(): Boolean;
+begin
+  Result := not AppBlocks(WizardSilent);
+end;
+
+function InitializeUninstall(): Boolean;
+begin
+  Result := not AppBlocks(UninstallSilent);
+end;
+
 { Last page: say whether ffmpeg is there. It is not bundled; nothing is downloaded or installed here. }
 procedure CurPageChanged(CurPageID: Integer);
 var
@@ -98,6 +149,6 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usPostUninstall then RemoveMenuVerbs;
   if (CurUninstallStep = usPostUninstall) and DirExists(ExpandConstant('{userappdata}\Convert')) then
-    if MsgBox(CustomMessage('DeleteSettings'),mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
+    if SuppressibleMsgBox(CustomMessage('DeleteSettings'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2, IDNO) = IDYES then  { silent: keep the settings }
       DelTree(ExpandConstant('{userappdata}\Convert'), True, True, True);
 end;
