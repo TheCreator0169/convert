@@ -125,9 +125,9 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 
 ## v0.1.11 (2026-11-19, not tagged, not published)
 
-- Commits `f76673e` (smaller window, landscape drop box, restyled select), `2c6202a` (tiles, automatic height, version) and `780d553` (Advanced: labels without a dark box, selects and number fields styled like Convert to). Rebuilt after the last one: the first v0.1.11 hashes are gone, that build was never published. Built with `build.ps1 v0.1.11`.
-- Convert.exe sha256 `2658036008e2f0bb2ddcebb82f27efc5a075315aa02707d64e6ba042fd972bc8`.
-- Convert-Setup-v0.1.11.exe sha256 `278284e8bed9f1c7daa056add19f2661134a70765f2c5b6713e77182551ca79e`.
+- Commits `f76673e` (smaller window, landscape drop box, restyled select), `2c6202a` (tiles, automatic height, version) and `780d553` (Advanced: labels without a dark box, selects and number fields styled like Convert to). and `5ba697a` (bottom row: no gap under the progress bar, Clear as big as Convert, version centred; hidden while the result buttons show). Rebuilt after each: earlier v0.1.11 hashes are gone, none was published. Tests: 167, 1 skipped. Built with `build.ps1 v0.1.11`.
+- Convert.exe sha256 `ac8dfc611655c71bf1fc4c20401cfad4f608ad61e04e7a2b3ee3e1bd2aac2964`.
+- Convert-Setup-v0.1.11.exe sha256 `27d9130ef69ab61809cf751ff659e0519f1fba66ba5fa17b60dcdc4abe41c1af`.
 - Window: 440 px wide, height follows the content and cannot be dragged (no maximize button); files shown as wrapping tiles (type badge and name, 4 per row, the box grows to 3 rows then scrolls); hint centred in the box; restyled "Convert to" select with a chevron (`assets/chevron.png`, bundled), placeholder "Add files first". Fixed on the way: with a placeholder Qt no longer selects the first format by itself.
 - Tests in source mode: 166, 1 skipped, all pass. Frozen smoke test inside the build passed; `chevron.png` is in the frozen bundle.
 - Measured by grabbing the real window (native platform, 440 px): empty 314 px high, 1 file 406, 5 files 454, 13 files 524, with Advanced open 556.
