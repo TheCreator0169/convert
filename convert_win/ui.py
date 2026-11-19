@@ -55,6 +55,7 @@ class UpdateNotice(QLabel):
     def __init__(self):
         super().__init__("A new version is available")
         self.setObjectName("update")
+        self.setAlignment(Qt.AlignRight)  # on the right, above the drop box
         self.setCursor(Qt.PointingHandCursor)
         self.url = ""
         self.hide()

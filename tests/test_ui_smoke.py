@@ -110,6 +110,7 @@ class UiSmoke(unittest.TestCase):
 
     def test_update_check_throttle_switch_and_notice(self):
         from unittest import mock
+        from PySide6.QtCore import Qt
         from convert_win import settings, update_check as uc
         page = uc.PAGE_PREFIX + "tag/v9.9.9"
         win = self.win
@@ -131,10 +132,10 @@ class UiSmoke(unittest.TestCase):
             fetch.assert_called_once()
         self.assertFalse(win.update_notice.isHidden())
         self.assertEqual(win.update_notice.url, page)
+        self.assertTrue(win.update_notice.alignment() & Qt.AlignRight)  # the notice sits on the right
         with mock.patch("convert_win.ui.webbrowser.open") as op:
             win.update_notice.show_for("https://evil.example/")  # refused: the old page stays
             self.assertEqual(win.update_notice.url, page)
-            from PySide6.QtCore import QPoint, Qt
             from PySide6.QtTest import QTest
             QTest.mouseClick(win.update_notice, Qt.LeftButton)
             op.assert_called_once_with(page)
