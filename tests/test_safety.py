@@ -199,7 +199,7 @@ class SettingsSafety(unittest.TestCase):
         for raw in ("[]", "3", "null", "{bad"):
             self.write(raw)
             self.assertEqual(settings.load(), {"trash_originals": False, "options": DEFAULTS, "last_format": {},
-                                                "update_check": True, "last_update_check": 0})
+                                                "update_check": True, "last_update_check": 0, "theme": "system"})
 
     def test_options_not_an_object(self):  # S5
         self.write({"options": [], "trash_originals": True})

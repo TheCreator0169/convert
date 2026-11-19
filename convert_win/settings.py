@@ -12,6 +12,7 @@ from .formats import DEFAULTS, OUTPUTS
 
 
 LOG_DAYS = 14
+THEMES = ("system", "dark", "light")  # the "theme" setting; anything else loads as "system"
 
 
 def _dir(var):
@@ -77,6 +78,7 @@ def load():
     last = saved.get("last_update_check")
     return {"trash_originals": saved.get("trash_originals") is True, "options": options, "last_format": _last_formats(saved),
             "update_check": saved.get("update_check", True) is True,  # on when absent; any other value than true means off
+            "theme": saved.get("theme") if saved.get("theme") in THEMES else "system",
             "last_update_check": last if isinstance(last, (int, float)) and not isinstance(last, bool) and math.isfinite(last) else 0}
 
 

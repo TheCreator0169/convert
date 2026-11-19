@@ -11,7 +11,7 @@ import webbrowser
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QRectF, QSize, QThread, QTimer, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QKeySequence, QPainter, QPen, QShortcut
+from PySide6.QtGui import QActionGroup, QColor, QFont, QFontMetrics, QGuiApplication, QIcon, QKeySequence, QPainter, QPen, QShortcut
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QApplication, QCheckBox, QComboBox, QFileDialog, QFormLayout, QGridLayout,
                                QGroupBox, QHBoxLayout, QLabel, QLayout, QLineEdit, QListView, QListWidget, QListWidgetItem,
@@ -146,6 +146,44 @@ def _asset(name):
     return p.as_posix() if p.is_file() else ""
 
 
+def _refresh_palette(app, setting):
+    """Picks dark or light for `setting` and the Windows scheme, updates PALETTE in place and rebuilds the stylesheet.
+    Never sets the Qt colour scheme (the scheme-changed handler relies on that)."""
+    scheme = "dark" if QGuiApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark else "light"
+    chosen = theme.resolve(setting, scheme)
+    theme.PALETTE.clear()
+    theme.PALETTE.update(theme.LIGHT if chosen == "light" else theme.DARK)
+    # the arrows: pale grey on dark, dark grey on light (assets\chevron-dark.png and chevron-up-dark.png)
+    arrow, arrow_up = ("chevron.png", "chevron-up.png") if chosen == "dark" else ("chevron-dark.png", "chevron-up-dark.png")
+    app.setStyleSheet(theme.stylesheet(chevron=_asset(arrow), chevron_up=_asset(arrow_up)))
+
+
+def _repaint(win):
+    """The tiles paint from PALETTE at paint time: repaint them with the new colours."""
+    win.update()
+    win.list.viewport().update()
+    win.update_notice.update()
+
+
+def apply_theme(app, setting, win=None):
+    """Applies "system", "dark" or "light": the Qt colour scheme (system = follow Windows), then the palette and stylesheet."""
+    hints = QGuiApplication.styleHints()
+    if setting == "system":
+        hints.unsetColorScheme()
+    else:
+        hints.setColorScheme(Qt.ColorScheme.Dark if setting == "dark" else Qt.ColorScheme.Light)
+    _refresh_palette(app, setting)
+    if win is not None:
+        _repaint(win)
+
+
+def _on_scheme_changed(app, win):
+    """Windows switched between dark and light. Only "system" follows it; a fixed choice ignores it. Never sets the scheme."""
+    if win.st["theme"] == "system":
+        _refresh_palette(app, "system")
+        _repaint(win)
+
+
 TILE = QSize(88, 64)   # one file: type badge on top, name below
 GRID = QSize(94, 70)   # tile plus 3 px around it
 PER_ROW, MAX_ROWS = 4, 3
@@ -195,7 +233,7 @@ class TileDelegate(QStyledItemDelegate):
         x_hot = self.parent().close_hot == index.row()
         if x_hot:
             p.setPen(Qt.NoPen)
-            p.setBrush(QColor(pal["border"]))
+            p.setBrush(QColor(pal["hot"]))
             p.drawRoundedRect(close, 4, 4)
         p.setPen(QColor(pal["error"] if x_hot else pal["muted"]))
         font.setPixelSize(12)
@@ -430,6 +468,11 @@ class Window(QWidget):
         self.version = QLabel(f"v{CONVERT_VERSION}")
         self.version.setObjectName("version")
         self.version.setAlignment(Qt.AlignCenter)
+        self.version.setContextMenuPolicy(Qt.CustomContextMenu)  # right-click: the Theme menu
+        self.version.customContextMenuRequested.connect(self._theme_menu)
+        self.version.setFocusPolicy(Qt.TabFocus)  # keyboard: Tab to it, then the Menu key or Shift+F10 opens the Theme menu
+        self.version.setAccessibleName("Theme")
+        self.version.setAccessibleDescription("Version number. Right-click, or press the Menu key, to choose System, Dark or Light theme")
         right = QHBoxLayout()
         right.setContentsMargins(0, 0, 0, 0)
         for b in (self.logs_btn, self.open_btn, self.stop, self.go):
@@ -480,6 +523,30 @@ class Window(QWidget):
         self.updater.found.connect(self.update_notice.show_for, Qt.QueuedConnection)  # the label is only touched on the GUI thread
         self.updater.start()
         return True
+
+    def _theme_menu(self, pos):
+        """Right-click on the version: System, Dark or Light. The choice applies at once and is saved."""
+        menu = QMenu(self.version)
+        menu.addAction("Theme").setEnabled(False)  # a label, not a choice (addSection is not drawn with the stylesheet)
+        menu.addSeparator()
+        group = QActionGroup(menu)
+        group.setExclusive(True)
+        for value, label in (("system", "System"), ("dark", "Dark"), ("light", "Light")):
+            act = menu.addAction(label)
+            act.setCheckable(True)
+            act.setChecked(self.st["theme"] == value)
+            act.setActionGroup(group)
+            act.triggered.connect(lambda _checked=False, v=value: self._set_theme(v))
+        menu.exec(self.version.mapToGlobal(pos))
+        menu.deleteLater()
+
+    def _set_theme(self, value):
+        self.st["theme"] = value
+        try:
+            settings.save(self.st)
+        except OSError as e:  # the theme still applies for this session
+            log.warning("settings not saved: %s", e)
+        apply_theme(QApplication.instance(), value, self)
 
     def eventFilter(self, obj, event):
         if obj is self.open_btn and event.type() in (QEvent.ShortcutOverride, QEvent.KeyPress) and event.key() in (Qt.Key_Return, Qt.Key_Enter):
@@ -845,13 +912,15 @@ def run(files):
                 return 0
             QThread.msleep(100)
         # it never answered (crashed?): carry on as the first instance
-    app.setStyleSheet(theme.stylesheet(chevron=_asset("chevron.png"), chevron_up=_asset("chevron-up.png")))
+    st = settings.load()  # once, and before the window: the theme is applied first, so the window never opens in the wrong one
+    apply_theme(app, st["theme"])
     QLocalServer.removeServer(PIPE)  # stale pipe name after a crash
     server = QLocalServer()
     server.setSocketOptions(QLocalServer.UserAccessOption)  # only this Windows user may connect
     if not server.listen(PIPE):  # before the window exists, so the others can connect while it builds
         log.warning("single-instance pipe not available: %s", server.errorString())
     win = Window()
+    QGuiApplication.styleHints().colorSchemeChanged.connect(lambda _scheme: _on_scheme_changed(app, win))  # "system" follows Windows
 
     def on_connection():
         c = server.nextPendingConnection()

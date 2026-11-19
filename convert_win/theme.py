@@ -1,14 +1,29 @@
 """Colours and the one stylesheet. No colour literal anywhere else."""
-PALETTE = {"bg": "#1b1d22", "panel": "#252830", "border": "#343844", "text": "#e8eaf0", "muted": "#9aa1b2",
-           "tile": "#2f3340", "accent": "#4c8dff", "accent_text": "#ffffff", "error": "#ff6b6b", "ok": "#4cd08a"}
+DARK = {"bg": "#1b1d22", "panel": "#252830", "border": "#343844", "text": "#e8eaf0", "muted": "#9aa1b2",
+        "tile": "#2f3340", "accent": "#4c8dff", "accent_text": "#ffffff", "error": "#ff6b6b", "ok": "#4cd08a",
+        "select": "#343844", "hot": "#343844"}  # select: the menu selection as it was; hot: the tile's x on hover, as it was
+LIGHT = {"bg": "#f3f4f7", "panel": "#ffffff", "border": "#7b8393", "text": "#1c1f26", "muted": "#555c6b",
+         "tile": "#e3e7ee", "accent": "#1b5ccc", "accent_text": "#ffffff", "error": "#b42318", "ok": "#17703f",
+         "select": "#dde3ed", "hot": "#d6dce6"}
+PALETTE = dict(DARK)  # the live palette: changed in place by ui.apply_theme, so readers that keep the dict see the switch
 
 
-def stylesheet(p=PALETTE, chevron="", chevron_up=""):
-    """`chevron`, `chevron_up`: paths (forward slashes) of the select and spin-box arrow images; empty keeps Qt's own arrows."""
+def resolve(setting, scheme):
+    """"dark" or "light" for a setting ("system", "dark", "light") and the Windows scheme. Anything but "dark" is light."""
+    if setting in ("dark", "light"):
+        return setting
+    return "dark" if scheme == "dark" else "light"
+
+
+def stylesheet(p=None, chevron="", chevron_up=""):
+    """`chevron`, `chevron_up`: paths (forward slashes) of the select and spin-box arrow images; empty keeps Qt's own arrows.
+    `p` defaults to the live PALETTE, read at call time."""
+    p = PALETTE if p is None else p
     arrow = f"image: url({chevron}); width: 10px; height: 10px;" if chevron else ""
     arrow_up = f"image: url({chevron_up}); width: 10px; height: 10px;" if chevron_up else ""
     return f"""
     QWidget {{ background: {p['bg']}; color: {p['text']}; font-family: 'Segoe UI'; font-size: 13px; }}
+    QToolTip {{ background: {p['panel']}; color: {p['text']}; border: 1px solid {p['border']}; }}
     QListWidget, QComboBox, QSpinBox, QGroupBox {{ background: {p['panel']}; border: 1px solid {p['border']};
         border-radius: 6px; padding: 4px; }}
     QListWidget#drop {{ border: 1px dashed {p['border']}; }}
@@ -19,6 +34,7 @@ def stylesheet(p=PALETTE, chevron="", chevron_up=""):
     QListWidget#drop QScrollBar::add-page:vertical, QListWidget#drop QScrollBar::sub-page:vertical {{ background: transparent; }}
     QLabel#update {{ color: {p['accent']}; font-size: 13px; }}
     QLabel#version {{ color: {p['muted']}; font-size: 12px; }}
+    QLabel#version:focus {{ background: {p['tile']}; color: {p['text']}; border-radius: 4px; }}
     QLabel#hint {{ background: transparent; color: {p['muted']}; }}
     QComboBox, QSpinBox {{ border-radius: 8px; padding: 0 12px; min-height: 34px; }}
     QComboBox:hover, QComboBox:on, QSpinBox:hover, QSpinBox:focus {{ border-color: {p['accent']}; }}
@@ -41,7 +57,7 @@ def stylesheet(p=PALETTE, chevron="", chevron_up=""):
     QPushButton#primary:disabled {{ background: {p['border']}; color: {p['muted']}; }}
     QMenu {{ background: {p['panel']}; border: 1px solid {p['border']}; border-radius: 6px; padding: 4px; color: {p['text']}; }}
     QMenu::item {{ background: transparent; padding: 7px 16px; }}
-    QMenu::item:selected {{ background: {p['border']}; }}
+    QMenu::item:selected {{ background: {p['select']}; }}
     QMenu::item:disabled {{ color: {p['muted']}; }}
     QProgressBar {{ background: {p['panel']}; border: none; border-radius: 4px; height: 8px; text-align: center; }}
     QProgressBar::chunk {{ background: {p['accent']}; border-radius: 4px; }}
