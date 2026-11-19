@@ -42,7 +42,10 @@ def load():
     for group, defaults in DEFAULTS.items():
         mine = saved_opts.get(group) if isinstance(saved_opts.get(group), dict) else {}
         options[group] = {k: _coerce(mine.get(k, d), d) for k, d in defaults.items()}
-    return {"trash_originals": saved.get("trash_originals") is True, "options": options}
+    last = saved.get("last_update_check")
+    return {"trash_originals": saved.get("trash_originals") is True, "options": options,
+            "update_check": saved.get("update_check") is not False,  # on unless the file says false
+            "last_update_check": last if isinstance(last, (int, float)) and not isinstance(last, bool) else 0}
 
 
 def save(settings):

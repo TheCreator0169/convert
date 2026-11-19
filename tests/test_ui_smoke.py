@@ -108,6 +108,63 @@ class UiSmoke(unittest.TestCase):
         win.add_files([])  # nothing added: the finished bar is left alone
         self.assertEqual(win.bar.value(), 1)
 
+    def test_update_check_throttle_switch_and_notice(self):
+        from unittest import mock
+        from convert_win import settings, update_check as uc
+        page = uc.PAGE_PREFIX + "tag/v9.9.9"
+        win = self.win
+        self.assertTrue(win.update_notice.isHidden())  # nothing to say: no room taken
+        with mock.patch.object(uc, "fetch_latest", return_value=("v9.9.9", page)) as fetch:
+            win.st["update_check"] = False  # switch off: no request at all
+            self.assertFalse(win.start_update_check())
+            win.st["update_check"], win.st["last_update_check"] = True, __import__("time").time() - 3600
+            self.assertFalse(win.start_update_check())  # tried an hour ago
+            fetch.assert_not_called()
+            win.st["last_update_check"] = 0
+            self.assertTrue(win.start_update_check())  # due: recorded first, then asked
+            self.assertGreater(settings.load()["last_update_check"], 0)
+            for _ in range(100):
+                QApplication.processEvents()
+                if not win.update_notice.isHidden():
+                    break
+                __import__("time").sleep(0.02)
+            fetch.assert_called_once()
+        self.assertFalse(win.update_notice.isHidden())
+        self.assertEqual(win.update_notice.url, page)
+        with mock.patch("convert_win.ui.webbrowser.open") as op:
+            win.update_notice.show_for("https://evil.example/")  # refused: the old page stays
+            self.assertEqual(win.update_notice.url, page)
+            from PySide6.QtCore import QPoint, Qt
+            from PySide6.QtTest import QTest
+            QTest.mouseClick(win.update_notice, Qt.LeftButton)
+            op.assert_called_once_with(page)
+
+    def test_failed_check_leaves_no_notice_and_still_counts(self):
+        from unittest import mock
+        from convert_win import settings, update_check as uc
+        win = self.win
+        win.st["update_check"], win.st["last_update_check"] = True, 0
+        with mock.patch.object(uc, "fetch_latest", return_value=None):
+            self.assertTrue(win.start_update_check())
+            __import__("time").sleep(0.2)
+            QApplication.processEvents()
+        self.assertTrue(win.update_notice.isHidden())
+        self.assertFalse(uc.due(settings.load()["last_update_check"]))  # the attempt is on record
+
+    def test_settings_keep_the_update_keys(self):
+        from convert_win import settings
+        st = settings.load()
+        self.assertIs(st["update_check"], True)  # on by default
+        st["update_check"], st["last_update_check"] = False, 123.5
+        settings.save(st)
+        back = settings.load()
+        self.assertIs(back["update_check"], False)
+        self.assertEqual(back["last_update_check"], 123.5)
+        (settings._dir("APPDATA") / "settings.json").write_text('{"update_check": "no", "last_update_check": "x"}')
+        back = settings.load()
+        self.assertIs(back["update_check"], True)  # only a real false turns it off
+        self.assertEqual(back["last_update_check"], 0)
+
     def test_title_has_no_version(self):
         self.assertEqual(self.win.windowTitle(), "Convert")
 

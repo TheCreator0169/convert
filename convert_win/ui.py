@@ -6,16 +6,18 @@ import logging
 import os
 import sys
 import threading
+import time
+import webbrowser
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QRect, QRectF, QSize, QThread, QTimer, Qt, Signal
+from PySide6.QtCore import QEvent, QObject, QRect, QRectF, QSize, QThread, QTimer, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QPen
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QFormLayout, QGridLayout, QGroupBox,
                                QHBoxLayout, QLabel, QLayout, QListView, QListWidget, QListWidgetItem, QProgressBar, QPushButton,
                                QSpinBox, QStyle, QStyledItemDelegate, QVBoxLayout, QWidget)
 
-from . import settings, theme
+from . import settings, theme, update_check
 from .converter import convert_file, describe, scrub
 from .formats import DEFAULTS, file_type, option_key, outputs_for, output_fmt
 from .process import Cancelled, find_tool
@@ -46,6 +48,51 @@ class MessageLabel(QLabel):
     def setText(self, text):
         super().setText(text)
         self.setVisible(bool(text))
+
+
+class UpdateNotice(QLabel):
+    """A plain line of text above the drop box: blue, underlined on hover. Not a button; a click opens the release page."""
+    def __init__(self):
+        super().__init__("A new version is available")
+        self.setObjectName("update")
+        self.setCursor(Qt.PointingHandCursor)
+        self.url = ""
+        self.hide()
+
+    def show_for(self, url):
+        if update_check.safe_page(url):  # only a page of this project's releases
+            self.url = url
+            self.show()
+
+    def _underline(self, on):
+        f = self.font()
+        f.setUnderline(on)
+        self.setFont(f)
+
+    def enterEvent(self, e):
+        self._underline(True)
+        super().enterEvent(e)
+
+    def leaveEvent(self, e):
+        self._underline(False)
+        super().leaveEvent(e)
+
+    def mousePressEvent(self, e):
+        if e.button() == Qt.LeftButton and update_check.safe_page(self.url):
+            webbrowser.open(self.url)
+
+
+class UpdateCheck(QObject):
+    """Runs the check on a daemon thread, so closing the window never waits for the network."""
+    found = Signal(str)
+
+    def start(self):
+        threading.Thread(target=self._run, daemon=True).start()
+
+    def _run(self):
+        url = update_check.newer_release_url(CONVERT_VERSION)
+        if url:
+            self.found.emit(url)  # delivered on the GUI thread
 
 
 def _asset(name):
@@ -222,7 +269,10 @@ class Window(QWidget):
         row.setColumnStretch(2, 1)
         row.setColumnMinimumWidth(0, 80)
         row.setColumnMinimumWidth(2, 80)
+        self.update_notice = UpdateNotice()
+        self.updater = None
         lay = QVBoxLayout(self)
+        lay.addWidget(self.update_notice)
         lay.addWidget(self.list)
         lay.addWidget(QLabel("Convert to"))
         lay.addWidget(self.fmt)
@@ -234,6 +284,20 @@ class Window(QWidget):
         lay.setContentsMargins(11, 11, 11, 11)
         lay.setSizeConstraint(QLayout.SetFixedSize)  # 440 px wide (the box is 418 px), as high as its content, always
         self._refresh()
+
+    def start_update_check(self):
+        """At most one attempt a day, while the app is in use. Called by run(), never by tests or by --cli."""
+        if not self.st["update_check"] or not update_check.due(self.st["last_update_check"]):
+            return False
+        self.st["last_update_check"] = time.time()  # recorded first: a failed or crashed attempt still counts as today's
+        try:
+            settings.save(self.st)
+        except OSError:
+            return False  # cannot record the attempt: better no check than one at every launch
+        self.updater = UpdateCheck()
+        self.updater.found.connect(self.update_notice.show_for)
+        self.updater.start()
+        return True
 
     def eventFilter(self, obj, event):
         # The version is hidden while Cancel / Open folder / Open log folder are shown: they would not fit beside it.
@@ -505,5 +569,5 @@ def run(files):
     while server.hasPendingConnections():  # connections that arrived while the window was being built
         on_connection()
     # Explorer starts one process per selected file: wait a moment so the others can forward theirs first.
-    QTimer.singleShot(300, lambda: (win.add_files(files), win.show()))
+    QTimer.singleShot(300, lambda: (win.add_files(files), win.show(), win.start_update_check()))
     return app.exec()

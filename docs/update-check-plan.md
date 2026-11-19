@@ -1,4 +1,4 @@
-# Update notice: plan (not built; for a version after v0.1.11)
+﻿# Update notice: plan (built in v0.1.13)
 
 Goal: when Convert is open, once a day, ask GitHub whether a newer release exists. If so, show a plain text line above the
 drop box. Nothing is downloaded or installed by Convert.
@@ -35,7 +35,7 @@ user: GitHub sees the IP address of the request, like any download page.
 1. Settle the rule above with the user; update `CLAUDE.md`, README and `decisions.md`.
 2. `convert_win\update_check.py`: `newer(tag, current)`, `due(last, now)`, `fetch_latest()` returning a tag and a URL or `None`.
 3. `settings.py`: the two new keys with defaults and the usual corrupt-file handling.
-4. `ui.py`: the notice label and a small `QThread`; started once per window, after `show()`.
+4. `ui.py`: the notice label and a daemon thread (`UpdateCheck`), started by `run()` after `show()`, never by the tests.
 5. Tests (no real network, `urllib` mocked): version comparison (`0.1.9` < `0.1.10`), once-a-day throttle, timestamp written before the request, timeout and bad JSON and 403 rate limit show nothing, a foreign URL is refused, switch off means no thread, the label takes no room while hidden.
 6. Real check once by hand against the public release list, from the user's terminal, with the user's OK.
 7. Frozen check: the frozen exe can reach GitHub (TLS certificates are bundled), and shows the notice when `CONVERT_VERSION` is lowered for the test.

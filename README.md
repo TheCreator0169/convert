@@ -4,8 +4,8 @@
 
 [![tests](https://github.com/TheCreator0169/convert/actions/workflows/tests.yml/badge.svg)](https://github.com/TheCreator0169/convert/actions/workflows/tests.yml)
 
-Right-click files in Explorer, choose **Convert**, pick a format. Everything runs on your PC: nothing is uploaded,
-no network code, no account, no analytics.
+Right-click files in Explorer, choose **Convert**, pick a format. Everything runs on your PC: your files are never uploaded,
+no account, no analytics. Once a day Convert asks GitHub whether a newer version exists (the only network call; turn it off with `"update_check": false` in `%APPDATA%\Convert\settings.json`).
 
 <p align="center"><img src="assets/screenshot.png" alt="The Convert window with a PNG ready to become a JPEG" width="442"></p>
 
