@@ -94,3 +94,13 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 - Tests in source mode: 164, 1 skipped, all pass, ffmpeg on the PATH.
 - Frozen smoke test (inside the build, temp profile): image to WebP, txt to PDF, md to DOCX, DOCX to PDF, PDF to PNG and TXT, MP4 to MP3, MKV and GIF all exit 0 with a non-empty output; runtime log frozen and free of errors.
 - Not verified: the CI on GitHub (never run; `test_single_instance` may fail on the runner), H9 hashes (needs pip-tools), the window, install, right-click and uninstall with this installer, SmartScreen (not signed).
+
+## v0.1.8 (2026-11-19, not tagged, not published)
+
+- Commits `b202d67` (fix), `f709cf9` (version 0.1.8), then the history. Built with `build.ps1 v0.1.8`.
+- Convert.exe sha256 `c0ecc3a439ef59ba8e05c433da9cf9605c57d75862af06e6941fa2bfe55454df`.
+- Convert-Setup-v0.1.8.exe sha256 `f1a2b8d4763e5789fd1d1d47a4722db46fc14f302f2459b6025f62d7110617e3`.
+- Fix: `unique_path` no longer follows a dangling symbolic link on Windows (found by the first CI run on v0.1.7); a process test no longer depends on the console encoding.
+- Tests in source mode: 164, 1 skipped (the link test needs a link privilege), all pass, ffmpeg on the PATH. CI on `windows-latest` was green at `b202d67` (164 tests, the link test ran there).
+- Frozen smoke test (inside the build, and rerun by hand): image to WebP, txt to PDF, md to DOCX, DOCX to PDF, PDF to PNG and TXT, MP4 to MP3, MKV and GIF all exit 0; runtime log frozen and free of errors; no Convert process left.
+- Not verified: the link fix in the frozen exe (no link privilege here), the window, install, right-click and uninstall with this installer, hardware encoders, SmartScreen (not signed).
