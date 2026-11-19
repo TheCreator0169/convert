@@ -20,16 +20,15 @@ def find_tool(name):
             return str(local)
     # shutil.which also tries the current folder on Windows (unless NoDefaultCurrentDirectoryInExePath is set, which an
     # Explorer launch does not have): a planted ffmpeg.exe beside the user's files would run. Walk PATH ourselves, absolute
-    # entries only.
-    exts = [e for e in os.environ.get("PATHEXT", ".EXE").lower().split(os.pathsep) if e] or [".exe"]
+    # entries only, and no network shares (\\ or //): a PATH entry there would start a file from another PC.
+    # Only .exe: PATHEXT would also allow .bat/.cmd, which run through cmd.exe.
     for d in os.environ.get("PATH", "").split(os.pathsep):
         d = d.strip('"')
-        if not d or not os.path.isabs(d):
+        if not d or not os.path.isabs(d) or d.startswith(("\\\\", "//")):
             continue
-        for ext in exts:
-            cand = Path(d) / f"{name}{ext}"
-            if cand.is_file():
-                return str(cand)
+        cand = Path(d) / f"{name}.exe"
+        if cand.is_file():
+            return str(cand)
     return None
 
 

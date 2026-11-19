@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
                                QSpinBox, QStyle, QStyledItemDelegate, QVBoxLayout, QWidget)
 
 from . import settings, theme, update_check
-from .converter import convert_file, describe, scrub
+from .converter import _is_network_path, convert_file, describe, scrub
 from .formats import DEFAULTS, file_type, option_key, outputs_for, output_fmt
 from .process import Cancelled, find_tool
 from .version import CONVERT_VERSION
@@ -316,7 +316,7 @@ class Window(QWidget):
         before = len(self.files)
         for p in paths:
             p = str(Path(p))
-            if Path(p).is_file() and file_type(p) in SUPPORTED and p not in self.files:
+            if not _is_network_path(p) and Path(p).is_file() and file_type(p) in SUPPORTED and p not in self.files:
                 self.files.append(p)
         if len(self.files) > before:
             self._reset_bar()  # a new batch: the bar of the last one is stale
@@ -517,8 +517,9 @@ _mutex = None
 def claim_first(name=PIPE):
     """Atomic: True for exactly one process. Two Explorer launches at the same instant must not both win."""
     global _mutex
-    _mutex = ctypes.windll.kernel32.CreateMutexW(None, False, f"Local\\{name}")
-    return ctypes.windll.kernel32.GetLastError() != 183  # ERROR_ALREADY_EXISTS
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # windll cannot take use_last_error
+    _mutex = kernel32.CreateMutexW(None, False, f"Local\\{name}")
+    return ctypes.get_last_error() != 183  # ERROR_ALREADY_EXISTS
 
 
 def run(files):
@@ -539,17 +540,18 @@ def run(files):
 
     def on_connection():
         c = server.nextPendingConnection()
+        c.setReadBufferSize(MAX_MESSAGE + 1)  # the socket buffers at most one byte past the limit, so a flood is not held
         buf = bytearray()
 
         def read():
-            buf.extend(c.readAll().data())
+            buf.extend(c.read(MAX_MESSAGE + 1).data())  # bounded: a peer cannot make us hold more than the limit
             if len(buf) > MAX_MESSAGE:  # a list of file names is never this big: drop the peer
                 c.abort()
 
         c.readyRead.connect(read)
 
         def finish():
-            buf.extend(c.readAll().data())
+            buf.extend(c.read(MAX_MESSAGE + 1).data())  # bounded too: the rest of a big message is not read here
             if len(buf) > MAX_MESSAGE:
                 return
             try:

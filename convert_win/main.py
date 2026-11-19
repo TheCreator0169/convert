@@ -44,7 +44,8 @@ def main(argv=None):
         (shell_integration.install if argv[0] == "--install-menu" else shell_integration.uninstall)()
         return 0
     from . import ui
-    return ui.run([a for a in argv if Path(a).is_file()])
+    from .converter import _is_network_path
+    return ui.run([a for a in argv if not _is_network_path(a) and Path(a).is_file()])  # is_file() would touch a UNC share
 
 
 if __name__ == "__main__":

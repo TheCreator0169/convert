@@ -31,6 +31,24 @@ def _coerce(val, default):
     return val if ok else default
 
 
+# Valid values of the numeric options: the same numbers as ui.py (RANGE, CHOICES). Not imported from ui: that module loads Qt.
+RANGES = {"bitrate": (32, 512), "fps": (0, 120), "width": (64, 3840), "quality": (1, 100), "max_size": (0, 16000)}
+CHOICES = {"sample_rate": (0, 22050, 44100, 48000), "channels": (0, 1, 2), "bit_depth": (16, 24),
+           "height": (0, 2160, 1440, 1080, 720, 480), "dpi": (72, 150, 300), "audio_track": (1, 2, 3, 4)}
+
+
+def _valid(group, key, val, default):
+    """A number outside its range is clamped to it; a value that is not one of the choices gives the default."""
+    if key in RANGES:
+        lo, hi = RANGES[key]
+        if group == "gif" and key == "fps":
+            lo = 1
+        return min(max(val, lo), hi)
+    if key in CHOICES:
+        return val if val in CHOICES[key] else default
+    return val
+
+
 def load():
     try:
         saved = json.loads((_dir("APPDATA") / "settings.json").read_text("utf-8-sig"))
@@ -42,7 +60,7 @@ def load():
     options = {}
     for group, defaults in DEFAULTS.items():
         mine = saved_opts.get(group) if isinstance(saved_opts.get(group), dict) else {}
-        options[group] = {k: _coerce(mine.get(k, d), d) for k, d in defaults.items()}
+        options[group] = {k: _valid(group, k, _coerce(mine.get(k, d), d), d) for k, d in defaults.items()}
     last = saved.get("last_update_check")
     return {"trash_originals": saved.get("trash_originals") is True, "options": options,
             "update_check": saved.get("update_check", True) is True,  # on when absent; any other value than true means off

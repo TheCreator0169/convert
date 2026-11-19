@@ -24,11 +24,24 @@ def scrub(text, path):
     return str(text).replace(folder.replace("\\", "\\\\"), "...").replace(folder, "...")
 
 
+def _is_network_path(p):
+    """\\server\\share and \\\\?\\UNC\\server\\share. Local drives (C:\\ and \\\\?\\C:\\) and \\\\?\\ drive paths are not refused.
+    \\\\?\\GLOBALROOT\\ (the object namespace, device paths) is refused too."""
+    s = str(p).replace("/", "\\").upper()
+    if s.startswith("\\\\?\\GLOBALROOT\\"):
+        return True
+    if s.startswith(("\\\\WSL$\\", "\\\\WSL.LOCALHOST\\")):  # the Linux subsystem on this PC: not a network share
+        return False
+    return s.startswith("\\\\?\\UNC\\") or (s.startswith("\\\\") and not s.startswith("\\\\?\\"))
+
+
 def convert_file(src, fmt_id, options, trash_original=False, cancel=None, notes=None):
     """`options` maps option group (audio, video, gif, image, doc, pdf) to its dict. Raises on failure.
     Warnings go to the `notes` list. The original is trashed only when the output is complete (no warning)."""
     notes = [] if notes is None else notes
     src = Path(os.path.abspath(src))  # absolute: a name starting with "-" or a "scheme:" prefix is never read as an option or URL
+    if _is_network_path(src):  # refused before is_file(), which would touch the network
+        raise ValueError(f"network (UNC) paths are not supported: {src.name}")
     if not src.is_file():
         raise FileNotFoundError(f"not a file: {src.name}")
     kind, fmt = output_fmt(src, fmt_id)

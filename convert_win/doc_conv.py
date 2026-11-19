@@ -1,6 +1,7 @@
 """Documents: TXT, MD, HTML, RTF, DOCX, ODT in; PDF, DOCX, ODT, RTF, TXT, HTML out. Qt's text engine is the hub."""
 import html
 import re
+import zipfile
 from pathlib import Path
 
 from PySide6.QtCore import QMarginsF, QRectF, QSizeF
@@ -9,6 +10,9 @@ from PySide6.QtGui import (QAbstractTextDocumentLayout, QColor, QPageLayout, QPa
 from PySide6.QtWidgets import QApplication
 
 from .process import Cancelled
+
+# stdlib zipfile inflates a whole member in one call otherwise (default cap 2 GB); with 16 MB each call yields at most 16 MB
+zipfile.ZipExtFile.MAX_N = 1 << 24
 
 
 def _strip_local_images(doc):
@@ -53,10 +57,19 @@ def _read(path):
 
 HEADING = re.compile(r"^(?:heading|titre|überschrift|título|titolo)\s*([1-6])$", re.I)  # Word style names, English and localized
 IMG_TYPES = {"image/png", "image/jpeg", "image/gif", "image/bmp"}  # what Qt can draw; emf/wmf/svg are not carried over
+MAX_UNZIPPED = 200_000_000  # bytes of all parts of one DOCX or ODT, by the declared sizes (checked before reading, not the real output)
+MAX_ODT_IMAGE_HTML = 100_000_000  # characters of embedded <img> HTML per DOCX or ODT: an image used many times is paid for each use
+
+
+def _check_unzipped(z):
+    total = sum(i.file_size for i in z.infolist())
+    if total > MAX_UNZIPPED:
+        raise RuntimeError(f"file too large when unpacked: {total // 1_000_000} MB (limit {MAX_UNZIPPED // 1_000_000} MB)")
 
 
 def _docx_html(path):
     import base64
+    import zipfile
 
     import docx
     from docx.oxml import parse_xml
@@ -64,12 +77,16 @@ def _docx_html(path):
     from docx.text.paragraph import Paragraph
     from docx.text.run import Run
 
+    with zipfile.ZipFile(path) as z:
+        _check_unzipped(z)
     d = docx.Document(str(path))
     try:
         numbering = d.part.numbering_part.element
     except (KeyError, NotImplementedError):  # no numbering part (Google Docs, simple generators): python-docx cannot create one
         numbering = None
     notes = []  # footnote and endnote texts in reading order, shown as a numbered list at the end
+    uris = {}  # relationship id -> data URI, encoded once per picture however many runs use it
+    image_budget = [MAX_ODT_IMAGE_HTML]  # characters of <img> HTML for the whole document, as in ODT
 
     def note_text(kind, nid):
         part = next((x for x in d.part.package.iter_parts() if str(x.partname) == f"/word/{kind}s.xml"), None)
@@ -82,11 +99,18 @@ def _docx_html(path):
         rn = Run(r, p)
         s = html.escape(rn.text).replace("\n", "<br>")
         for rid in r.xpath(".//a:blip/@r:embed"):
-            part = d.part.related_parts.get(rid)
-            if part is not None and part.content_type in IMG_TYPES:
+            if rid not in uris:
+                part = d.part.related_parts.get(rid)
+                usable = part is not None and part.content_type in IMG_TYPES
+                uris[rid] = f"data:{part.content_type};base64,{base64.b64encode(part.blob).decode()}" if usable else ""
+            if uris[rid]:
                 cx, cy = (r.xpath(f"string(.//wp:extent/@{a})") for a in ("cx", "cy"))
                 size = f' width="{int(cx) // 9525}" height="{int(cy) // 9525}"' if cx.isdigit() and cy.isdigit() else ""
-                s += f'<img src="data:{part.content_type};base64,{base64.b64encode(part.blob).decode()}"{size}>'
+                tag = f'<img src="{uris[rid]}"{size}>'
+                if len(tag) > image_budget[0]:  # fail loudly, as the ODT reader does: skipping would lose pictures
+                    raise RuntimeError("too many or too large images in this document")
+                image_budget[0] -= len(tag)
+                s += tag
         for kind in ("footnote", "endnote"):
             for nid in r.xpath(f".//w:{kind}Reference/@w:id"):
                 notes.append(note_text(kind, nid))
@@ -205,6 +229,8 @@ def _odt_from_zip(z):
 
     from lxml import etree
 
+    _check_unzipped(z)
+
     def q(prefix, name):
         return f"{{{ODF_NS[prefix]}}}{name}"
 
@@ -249,6 +275,8 @@ def _odt_from_zip(z):
         return ("<b>" if b else "") + ("<i>" if i else "") + body + ("</i>" if i else "") + ("</b>" if b else "")
 
     notes = []
+    images = {}  # href -> <img> html, or "" when not usable: each picture is decoded once
+    image_budget = [MAX_ODT_IMAGE_HTML]
 
     def inline(el):
         out = html.escape(el.text or "")
@@ -272,10 +300,17 @@ def _odt_from_zip(z):
                     out += f"<sup>[{len(notes)}]</sup>"
                 elif tag == "image":
                     href = c.get(q("xlink", "href")) or ""
-                    mime = IMG_EXT.get(href.rsplit(".", 1)[-1].lower())
-                    data = part(href) if mime and not href.startswith(("/", "..")) else None
-                    if data and len(data) < 20_000_000:
-                        out += f'<img src="data:{mime};base64,{base64.b64encode(data).decode()}">'
+                    if href not in images:
+                        mime = IMG_EXT.get(href.rsplit(".", 1)[-1].lower())
+                        data = part(href) if mime and not href.startswith(("/", "..")) else None
+                        images[href] = (f'<img src="data:{mime};base64,{base64.b64encode(data).decode()}">'
+                                        if data and len(data) < 20_000_000 else "")
+                    tag_html = images[href]
+                    if tag_html:
+                        if len(tag_html) > image_budget[0]:  # fail loudly: skipping would lose pictures and still trash the original
+                            raise RuntimeError("too many or too large images in this document")
+                        image_budget[0] -= len(tag_html)
+                        out += tag_html
                 elif tag not in ("note-citation", "note-body", "annotation", "bookmark", "bookmark-start", "bookmark-end"):
                     out += inline(c)
             out += html.escape(c.tail or "")
@@ -639,10 +674,45 @@ LOSSY_IN = {"rtf": "RTF headings, lists and pictures were not carried over"}
 DOCX_DROPPED = ("<w:pict", "<w:txbxContent", "<w:object")  # parts the DOCX reader skips
 
 
+def _odt_loses_content(path):
+    import zipfile
+
+    from lxml import etree
+
+    with zipfile.ZipFile(path) as z:
+        _check_unzipped(z)
+        if "content.xml" not in z.namelist():
+            return False
+        root = etree.fromstring(z.read("content.xml"), etree.XMLParser(resolve_entities=False, no_network=True))
+    lost = ("custom-shape", "text-box", "object", "object-ole", "line", "rect", "ellipse", "polygon", "polyline", "path", "g", "connector")
+    return next(root.iter(*(f"{{{ODF_NS['draw']}}}{n}" for n in lost)), None) is not None
+
+
+def _odt_drops_pictures(path):
+    """True when a draw:image will not be carried over: not an embedded png/jpg/gif/bmp under 20 MB (svg, emf, a remote link...).
+    Same rules as _odt_from_zip, read from the declared sizes."""
+    from lxml import etree
+
+    with zipfile.ZipFile(path) as z:
+        _check_unzipped(z)
+        if "content.xml" not in z.namelist():
+            return False
+        root = etree.fromstring(z.read("content.xml"), etree.XMLParser(resolve_entities=False, no_network=True))
+        names = set(z.namelist())
+        for img in root.iter(f"{{{ODF_NS['draw']}}}image"):
+            href = img.get(f"{{{ODF_NS['xlink']}}}href") or ""
+            ok = (href.rsplit(".", 1)[-1].lower() in IMG_EXT and not href.startswith(("/", "..")) and href in names
+                  and z.getinfo(href).file_size < 20_000_000)
+            if not ok:
+                return True
+    return False
+
+
 def _docx_loses_content(path):
     import zipfile
 
     with zipfile.ZipFile(path) as z:
+        _check_unzipped(z)
         xml = z.read("word/document.xml").decode("utf-8", "replace")
         if any(n.lower().endswith((".emf", ".wmf", ".svg")) for n in z.namelist() if n.startswith("word/media/")):
             return True
@@ -674,4 +744,9 @@ def convert(src, dst, fmt, opts, cancel=None):
     ext = Path(src).suffix.lower().lstrip(".")
     if ext == "docx" and _docx_loses_content(src):
         return "text boxes, vector images or legacy objects were not carried over"
+    if ext == "odt":
+        lost = [msg for hit, msg in ((_odt_loses_content(src), "drawings and text boxes may not be carried over in full"),
+                                     (_odt_drops_pictures(src), "pictures were not carried over")) if hit]
+        if lost:
+            return "; ".join(lost)
     return LOSSY_IN.get(ext)

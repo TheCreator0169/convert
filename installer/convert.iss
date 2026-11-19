@@ -79,8 +79,24 @@ begin
   end;
 end;
 
+{ Safety net: --uninstall-menu normally removes the Explorer verbs; if it failed, remove them here (HKCU only, only our own key). }
+procedure RemoveMenuVerbs;
+var
+  Exts: String;
+  P: Integer;
+begin
+  Exts := 'mp3,m4a,aac,wav,aiff,aif,flac,opus,ogg,oga,wma,ac3,wv,mp2,mp4,mov,webm,mkv,avi,m4v,wmv,flv,mpg,mpeg,3gp,jpg,jpeg,png,heic,heif,avif,webp,tif,tiff,gif,bmp,txt,md,markdown,html,htm,rtf,docx,odt,pdf,';
+  while Exts <> '' do
+  begin
+    P := Pos(',', Exts);
+    RegDeleteKeyIncludingSubkeys(HKCU, 'Software\Classes\SystemFileAssociations\.' + Copy(Exts, 1, P - 1) + '\shell\Convert');
+    Delete(Exts, 1, P);
+  end;
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
+  if CurUninstallStep = usPostUninstall then RemoveMenuVerbs;
   if (CurUninstallStep = usPostUninstall) and DirExists(ExpandConstant('{userappdata}\Convert')) then
     if MsgBox(CustomMessage('DeleteSettings'),mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
       DelTree(ExpandConstant('{userappdata}\Convert'), True, True, True);
