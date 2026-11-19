@@ -219,3 +219,16 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 - Tests in source mode: 363, 1 skipped, all pass (20 new in `test_v020.py`). Frozen smoke test: all checks passed.
 - Install test on the user's PC (real HKCU, `.claude\test-installer-v0.2.0.ps1`): silent upgrade 0.1.18 to 0.2.0 exit 0, exe 0.2.0, uninstall entry 0.2.0, menu key present; the installed exe converted a synthetic 3-image HEIC into 3 jpg, exit 0.
 - Not verified: a real iPhone HEIC; `still_count` seeks every frame (cost on large files); aggregate caps also apply to stills (a 3-image file of 150 million pixels each is refused); ICC and `_save_kw` have no dedicated test; an empty reserved file can remain if the process is killed; the Explorer menu; Windows 11 "Show more options".
+
+## v0.2.1 (2026-11-20)
+
+- Commit `8ce145e`, then the history. Built with `build.ps1 v0.2.1`.
+- Convert.exe sha256 `ce7dde4262770f1ab323e7b089425ed50a7760eb57262a7f6055ba8f8143b32d`.
+- Convert-Setup-v0.2.1.exe sha256 `cecceb63c850846a8dbb6ab6f043677b9dbbd225eeed9d1de93139ec894c1af8`.
+- New: light theme and a Theme choice (System, Dark, Light; default System, follows Windows live). Right-click the version number, or Tab to it and press the Menu key / Shift+F10. Saved as `theme` in `settings.json` (exact strings only, else "system"). Light palette: bg #f3f4f7, panel #ffffff, border #7b8393, text #1c1f26, muted #555c6b, tile #e3e7ee, accent #1b5ccc, error #b42318, ok #17703f; every text pair at least 4.5:1. Dark rendering unchanged (pixel-identical tiles) except tooltips, which now follow the theme. New dark chevron images for the combo arrows in light mode (build.ps1 and Convert.spec list them; Convert.spec is git-ignored).
+- Known dark-theme contrast shortfalls left as they are (user's choice): primary button text 3.2:1, "Working" 3.9:1, x hover 4.2:1, tile and progress edges.
+- Review: keyboard access to the Theme menu was missing; fixed (focusable version label, accessible name, focus background).
+- Made by Haiku 5.5 agents (ui-designer, builder, tester, reviewer, windows-builder).
+- Tests in source mode: 390, 1 skipped, all pass (27 new in `test_v021.py`; 6 of 7 mutations caught, the survivor `setColorScheme(Light)` added in apply_theme is not caught). Frozen smoke test: all checks; `--cli jpg` exit 0; dark chevrons present in the exe.
+- Install test on the user's PC: silent upgrade 0.2.0 to 0.2.1 exit 0, exe and uninstall entry 0.2.1; the user looked at the themes and approved the light theme.
+- Not verified: real light Windows with System mode, live Windows mode change, the Windows title bar, Windows 11 style details, the Explorer menu. Existing users on a light Windows get the light theme after the update (default System).
