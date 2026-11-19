@@ -165,3 +165,13 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 - Real GPU test on this PC (NVIDIA GeForce RTX 3050): ffmpeg lists and passes the start-up test for h264_nvenc and hevc_nvenc (also av1_nvenc, av1_amf, av1_qsv, which Convert does not use). MP4 (H.264) and MP4 HEVC with hardware encoding on: 1280x720 and 320x240 convert and play as h264 and hevc; with it off libx264 and libx265 are chosen; a 96x64 clip makes NVENC refuse and Convert falls back to software with the warning. QSV and AMF were not tested (no such hardware here).
 - Installed on the user's PC in the user's terminal, silently (v0.1.13 to v0.1.14): uninstall entry 0.1.14, right-click verb still there, exe version 0.1.14, settings kept. The installer pages were skipped by the silent mode.
 - Not verified: the notice in a real window, a corporate proxy, the pages of this installer, QSV and AMF.
+
+## v0.1.15 (2026-11-19)
+
+- Commit `e2923d8`, then the history. Built with `build.ps1 v0.1.15`.
+- Convert.exe sha256 `8395fcfcb6d435dfff29f95f0d5565236999c36012b9c845bb778dec67885388`.
+- Convert-Setup-v0.1.15.exe sha256 `51154be5368cd74291954244e4971d8dce77ab069eee43d8fc8b3e17943a5a68`.
+- Safety hardening, no visible change in the window: size caps for DOCX/ODT (unzipped, pictures encoded once, total budget) and for images (pixels, every frame); ffmpeg found only as `.exe`; network (UNC, `\?\GLOBALROOT`) paths refused; pipe read bounded; `settings.json` numbers clamped; an ODT with drawings, text boxes or pictures not carried over keeps the original and warns; the installer removes the Explorer verbs at uninstall even if `--uninstall-menu` fails (Pascal `RemoveMenuVerbs`, compiled, not run).
+- Made by Haiku 5.5 agents (builders, tester, reviewer, security-auditor, windows-builder); the reviewer and auditor findings were re-checked and fixed before the commit. Decision D8 (refuse UNC) applied on the assistant's advice.
+- Tests in source mode: 217, 1 skipped, all pass (35 new in `test_hardening_v0115.py`; the new tests fail without their fix, except two guards). Frozen smoke test: 10 of 10 checks.
+- Not verified: install, upgrade and uninstall with this setup (RemoveMenuVerbs not run), the Explorer menu, real network shares, the sizes of `dist\` files read by the orchestrator (hashes taken from build.ps1 and `SHA256SUMS`).
