@@ -5,14 +5,9 @@ Build details (hashes, archives) live in `BUILD_HISTORY.md`; do not copy them he
 
 ## Current work
 
-**v0.1.0 built (2026-11-18), nothing committed or tagged.** Core converters, CLI, PySide6 window, Explorer menu code, `build.ps1`
-and `installer\convert.iss` exist. Image, document and PDF conversions are verified in source and frozen. ffmpeg and Inno Setup are installed (user's OK); real audio/video tests pass in source and frozen; `Convert-Setup-v0.1.0.exe` is built.
-Installed on the user's PC; the real right-click entry works and a .jpg to .webp conversion was confirmed by the user. The real-registry uninstall
-and reinstall round trip is clean (`BUILD_HISTORY.md`). Open: the copyright holder name in `LICENSE`; the real hardware encoders were not tested.
+**v0.1.13 published (2026-11-19), main at the history commit after `f9c5bca`.** Everything the user asked for is released: window redone (440 px wide, height follows the content and is not resizable, files as wrapping tiles, restyled selects and Advanced, version at the bottom, title just "Convert"), installer (license, English/French, optional desktop shortcut, clean upgrade, ffmpeg note on the last page), README rewritten (screenshot, numbered install, emojis), daily update notice (the one network call, off with `update_check: false`). 181 tests green, CI green.
 
-**Next: the plan in `docs\ROADMAP.md` (v0.1.1 safety, v0.1.2 security, v0.1.3 documents, v0.2.0 window, v0.3.0 installer, v0.4.0 tests/CI).**
-Four Haiku agents (scout x2, reviewer, security-auditor) produced it on 2026-11-18; Sonnet reproduced S1-S6 and the settings crash. Seven decisions (D1-D7) wait for the user.
-
+**Open, in the user's hands or needing an OK:** copyright holder name in `LICENSE`; H9 dependency hashes (needs pip-tools, a download); real hardware encoders; the installed app is v0.1.12 and has no update notice (install the v0.1.13 setup once); Windows 11 top-level menu (sparse MSIX, not started); D1-D7 of `docs\ROADMAP.md` (defaults applied, not re-read).
 ## Done
 
 - Omega structure (`.claude\`: 8 Haiku agents, 7 skills, settings; `CLAUDE.md`; `docs\`).
@@ -29,3 +24,5 @@ Four Haiku agents (scout x2, reviewer, security-auditor) produced it on 2026-11-
 - 2026-11-19: v0.1.6 pushed and released (hash checked). v0.1.7 coded: `tests/test_coverage_gaps.py` (every image input, palette/CMYK/grayscale, UTF-16/BOM text, PDF page naming/dpi/encrypted, a corrupt file per family, silent video, CLI exit codes), `tools/smoke_frozen.py` called by `build.ps1`, `.github/workflows/tests.yml` plus README badge. The smoke test found a real bug: NVENC refuses tiny videos and the conversion failed; now retried in software with a warning. H9 hashes not done (needs pip-tools download OK).
 - 2026-11-19: v0.1.7 pushed and released (hash checked). The first CI run failed 2 tests: a real `unique_path` bug (dangling symlink followed on Windows, skipped on this PC for lack of a link privilege) and an encoding-dependent test. Both fixed locally and committed; the fix is not in the published v0.1.7, it goes in the next version. CI rerun needs a push.
 - 2026-11-19: v0.1.8 built (fix for the dangling link in unique_path, version bump); 164 tests, frozen smoke OK. Pushed (`43b112a`) and released as v0.1.8 (asset hash checked); CI green on main.
+- 2026-11-19: v0.1.8 (unique_path fix) and v0.1.9 to v0.1.13 released, each hash checked on GitHub. v0.1.9: installer pages. v0.1.10 never published (its ffmpeg last page is inside v0.1.11). v0.1.11: new window (tiles, automatic height, select styling, bottom row, version centred). v0.1.12: Advanced keeps the option names when switched off; progress bar resets on Clear. v0.1.13: daily update notice on the right. The real install, upgrade, uninstall round trip ran in the user's terminal for v0.1.8 to v0.1.9 only; later setups were not installed by the agent.
+- 2026-11-19 lessons: a visual round needs the element list and an OK first (done each time); a Qt placeholder text stops the combo from selecting item 0 (found by a screenshot, now tested); the full test suite must pass before a commit and a build (v0.1.13 was committed once with one failing old test, caught by the run's own output and fixed); `gh release create` needs the full commit hash for `--target`; never type a hash from memory.
