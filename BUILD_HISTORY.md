@@ -122,3 +122,13 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 - Convert-Setup-v0.1.10.exe sha256 `cddb181f4625de06a136a1481dbdc5b7b10b50b758101a765530716efccba183`.
 - Verified: the installer compiles, frozen smoke test inside the build passed.
 - Not verified: how the finish page looks (text may be cut off), the ffmpeg detection in a real wizard run, install and upgrade round trip with this setup.
+
+## v0.1.11 (2026-11-19, not tagged, not published)
+
+- Commits `f76673e` (smaller window, landscape drop box, restyled select) and `2c6202a` (tiles, automatic height, version). Built with `build.ps1 v0.1.11`.
+- Convert.exe sha256 `18b1bac1f2d538cde52df80e55fd79e0303e20b883617e06ae6cb08eeb491131`.
+- Convert-Setup-v0.1.11.exe sha256 `b75c1181102926beea69e8b3ec8fa597cd1ad81176869e1a031d93b99bee3a73`.
+- Window: 440 px wide, height follows the content and cannot be dragged (no maximize button); files shown as wrapping tiles (type badge and name, 4 per row, the box grows to 3 rows then scrolls); hint centred in the box; restyled "Convert to" select with a chevron (`assets/chevron.png`, bundled), placeholder "Add files first". Fixed on the way: with a placeholder Qt no longer selects the first format by itself.
+- Tests in source mode: 166, 1 skipped, all pass. Frozen smoke test inside the build passed; `chevron.png` is in the frozen bundle.
+- Measured by grabbing the real window (native platform, 440 px): empty 314 px high, 1 file 406, 5 files 454, 13 files 524, with Advanced open 556.
+- Not verified: how it looks on the user's screen (DPI scaling above 100% may widen the window), the frozen window itself, the install and upgrade round trip with this setup (installer script unchanged since v0.1.10), hardware encoders, SmartScreen.
