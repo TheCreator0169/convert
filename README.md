@@ -5,36 +5,31 @@
 [![tests](https://github.com/TheCreator0169/convert/actions/workflows/tests.yml/badge.svg)](https://github.com/TheCreator0169/convert/actions/workflows/tests.yml)
 
 Right-click files in Explorer, choose **Convert**, pick a format. Everything runs on your PC: nothing is uploaded,
-there is no network code, no account, no analytics.
+no network code, no account, no analytics.
 
-Inspired by the macOS app [Convert](https://github.com/newtonstudios/convert) by newtonstudios: this is a Windows take on the same idea,
-written from scratch (nothing copied).
-Untested on other machines: keep your originals until you trust it.
+<p align="center"><img src="assets/screenshot.png" alt="The Convert window with a PNG ready to become a JPEG" width="442"></p>
 
-## What it does
-
-- Output goes **next to the original**, numbered if the name exists (`song 2.mp3`). Nothing is overwritten.
-- Batches: many files of one kind at once, one progress bar. Audio and video can be mixed (audio targets).
-- Optional switch: move originals to the Recycle Bin after each successful conversion.
-- Drag files onto the window, or use the right-click menu.
+The result goes **next to the original** and nothing is overwritten. Convert many files at once, or drag them onto the window.
 
 | Input | Output |
 |---|---|
-| Audio | MP3, M4A (AAC), WAV, AIFF, FLAC, ALAC, Opus, OGG, WMA, AC3, WavPack, MP2 |
-| Video | MP4 (H.264, HEVC, AV1), MOV (ProRes 422), WebM (VP9), MKV, animated GIF, or any audio format |
-| Images | JPEG, PNG, HEIC, AVIF, WebP, TIFF, GIF, BMP, PDF |
-| Documents (TXT, MD, HTML, RTF, DOCX, ODT) | PDF, DOCX, ODT, RTF, TXT, HTML |
-| PDF | PNG or JPEG (one per page), TXT |
-
-Advanced options per format (bitrate, resolution, quality, dpi, page size...) are remembered.
+| 🎵 Audio | MP3, M4A, WAV, AIFF, FLAC, ALAC, Opus, OGG, WMA, AC3, WavPack, MP2 |
+| 🎬 Video | MP4 (H.264, HEVC, AV1), MOV, WebM, MKV, GIF, or any audio format |
+| 🖼️ Images | JPEG, PNG, HEIC, AVIF, WebP, TIFF, GIF, BMP, PDF |
+| 📄 Documents | PDF, DOCX, ODT, RTF, TXT, HTML (from TXT, MD, HTML, RTF, DOCX, ODT) |
+| 📕 PDF | PNG or JPEG (one per page), TXT |
 
 ## Install
 
-Run `Convert-Setup-vX.Y.Z.exe` (per-user, no admin). It adds **Convert** to the right-click menu.
-Audio and video need **ffmpeg**: `winget install Gyan.FFmpeg`. Images, documents and PDF work without it.
+1. Download `Convert-Setup-vX.Y.Z.exe` from the [latest release](https://github.com/TheCreator0169/convert/releases/latest).
+2. Run it (no admin rights needed).
+3. Right-click any file and choose **Convert**.
 
-Windows 11 shows the entry under **Show more options** (or Shift+F10), not in the short menu.
-Windows SmartScreen may warn: the installer is not code-signed.
+- Windows warns "protected your PC"? Click **More info**, then **Run anyway**. The installer is not signed.
+- Windows 11: the entry is under **Show more options** (or Shift+F10).
+- Audio and video need ffmpeg: `winget install Gyan.FFmpeg`. Everything else works without it.
+
+Untested on other machines: keep your originals until you trust it.
 
 ## Uninstall
 
@@ -42,27 +37,25 @@ Windows Settings, Apps, Convert. It removes the program and the menu entry, and 
 
 ## Known limits
 
-- Legacy `.doc` is not supported. RTF and ODT inputs keep text only; Markdown covers common syntax.
-- Animated GIF and multi-page TIFF keep every frame only for PDF, TIFF, GIF and WebP outputs; other formats keep the first frame, and the original is then kept even if the Recycle Bin switch is on.
-- Hardware encoders (NVENC, QSV, AMF) are used only when ffmpeg lists them and a test encode works.
+- Legacy `.doc` is not supported. RTF and ODT inputs keep the text only.
+- An animated GIF keeps every frame only for PDF, TIFF, GIF and WebP outputs.
+
+Details: `docs\known-issues.md`.
 
 ## Develop
 
 ```
 py -3.13 -m venv .venv-win
 .venv-win\Scripts\python.exe -m pip install -r requirements.txt
-.venv-win\Scripts\python.exe convert.pyw [files]              # window
-.venv-win\Scripts\python.exe -m convert_win.main --cli mp3 song.opus
-.venv-win\Scripts\python.exe -m convert_win.main --cli        # list format ids
 .venv-win\Scripts\python.exe -m unittest discover -s tests -t .
-powershell -File build.ps1 v0.1.0                            # exe, plus installer if Inno Setup is installed
 ```
 
-Project notes: `docs\`. The agent setup (`.claude\`, `CLAUDE.md`) is kept local.
+Run the window with `.venv-win\Scripts\python.exe convert.pyw`; build with `powershell -File build.ps1 vX.Y.Z`.
 
 ## License
 
 MIT, see `LICENSE`. ffmpeg is not bundled and keeps its own license.
+Inspired by the macOS app [Convert](https://github.com/newtonstudios/convert) by newtonstudios; written from scratch.
 
 ## Support
 
