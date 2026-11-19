@@ -153,3 +153,15 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 - Frozen exe, temp profile, real network: the log says "update check: latest release is v0.1.12" and the attempt time is saved; the process was stopped by its PID.
 - Measured: the notice is 17 px high and the window grows from 291 to 314 px while it shows; it takes no room while hidden; aligned right.
 - Not verified: the notice in the frozen window (the real network answer is "no newer release", so it stayed hidden), a corporate proxy, how it looks on the user's screen, install and upgrade with this setup.
+
+## v0.1.14 (2026-11-19, not tagged, not published)
+
+- Commit `77805d3`, then the history. Built with `build.ps1 v0.1.14`.
+- Convert.exe sha256 `dac322330fb393077d41450076c8091e08045ad4dc65afb80485deda4b6b7a98`.
+- Convert-Setup-v0.1.14.exe sha256 `2a735dcffd22ae5f68eb239b01bfdbc41628566ca75e6b84e8060f77a696b257`.
+- Dependencies pinned with hashes (H9): `requirements.in` (direct pins) and `requirements.txt` generated with `pip-compile --generate-hashes --strip-extras --allow-unsafe` (pip-tools 7.7.0 in a scratch venv outside the repo; 676 hash lines). Verified: `pip install --require-hashes -r requirements.txt` in a fresh Python 3.13 venv (31 packages, exit 0) and the whole suite run with that venv: 182 tests OK. CI not yet seen with it.
+- Update check hardened after a read-only audit by the security-auditor agent (its claims re-checked by hand: RecursionError, huge integers, HTTPException and unicode digits all escaped the old code): any exception means "no answer"; tags only ASCII digits, 6 at most; the page address must match `https://github.com/TheCreator0169/convert/releases/[A-Za-z0-9._/-]*` completely; the signal is connected as a queued connection; `update_check` is on only when true or absent (`"false"`, 0, null all mean off); a NaN or infinite last-check time is ignored; `settings.json` is written through a temp file and replaced. Not taken: refusing a redirect to http (the page check already limits the damage).
+- Tests in source mode: 182, 1 skipped, all pass; the failure test no longer sleeps a fixed time.
+- Real GPU test on this PC (NVIDIA GeForce RTX 3050): ffmpeg lists and passes the start-up test for h264_nvenc and hevc_nvenc (also av1_nvenc, av1_amf, av1_qsv, which Convert does not use). MP4 (H.264) and MP4 HEVC with hardware encoding on: 1280x720 and 320x240 convert and play as h264 and hevc; with it off libx264 and libx265 are chosen; a 96x64 clip makes NVENC refuse and Convert falls back to software with the warning. QSV and AMF were not tested (no such hardware here).
+- Installed on the user's PC in the user's terminal, silently (v0.1.13 to v0.1.14): uninstall entry 0.1.14, right-click verb still there, exe version 0.1.14, settings kept. The installer pages were skipped by the silent mode.
+- Not verified: the notice in a real window, a corporate proxy, the pages of this installer, QSV and AMF.
