@@ -23,12 +23,29 @@ UninstallDisplayIcon={app}\Convert.exe
 Compression=lzma2
 SolidCompression=yes
 CloseApplications=yes
+LicenseFile=..\LICENSE
+
+[Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "french"; MessagesFile: "compiler:Languages\French.isl"
+
+[CustomMessages]
+english.DeleteSettings=Also delete your Convert settings?
+french.DeleteSettings=Supprimer aussi les parametres de Convert ?
+
+[Tasks]
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+
+[InstallDelete]
+; An upgrade starts from a clean program folder, so files dropped from the app do not linger. Settings and logs live elsewhere.
+Type: filesandordirs; Name: "{app}\_internal"
 
 [Files]
 Source: "..\dist\Convert\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 
 [Icons]
 Name: "{userprograms}\Convert"; Filename: "{app}\Convert.exe"
+Name: "{userdesktop}\Convert"; Filename: "{app}\Convert.exe"; Tasks: desktopicon
 
 [Run]
 ; Adds "Convert" to the Explorer right-click menu (HKCU only)
@@ -46,6 +63,6 @@ Type: filesandordirs; Name: "{localappdata}\Convert"
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if (CurUninstallStep = usPostUninstall) and DirExists(ExpandConstant('{userappdata}\Convert')) then
-    if MsgBox('Also delete your Convert settings?', mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
+    if MsgBox(CustomMessage('DeleteSettings'),mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
       DelTree(ExpandConstant('{userappdata}\Convert'), True, True, True);
 end;
