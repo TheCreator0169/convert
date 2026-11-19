@@ -12,6 +12,7 @@ import urllib.request
 log = logging.getLogger("convert")
 API = "https://api.github.com/repos/TheCreator0169/convert/releases/latest"
 PAGE_PREFIX = "https://github.com/TheCreator0169/convert/releases/"
+PAGE_RE = re.compile(r"https://github\.com/TheCreator0169/convert/releases/[A-Za-z0-9._/-]*", re.ASCII)
 DAY = 24 * 3600
 TIMEOUT = 5  # seconds
 MAX_BYTES = 1 << 20
@@ -19,7 +20,7 @@ MAX_BYTES = 1 << 20
 
 def parse(tag):
     """'v0.1.12' or '0.1.12' -> (0, 1, 12); anything else -> None."""
-    m = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)", tag.strip()) if isinstance(tag, str) else None
+    m = re.fullmatch(r"v?(\d{1,6})\.(\d{1,6})\.(\d{1,6})", tag.strip(), re.ASCII) if isinstance(tag, str) else None
     return tuple(int(x) for x in m.groups()) if m else None
 
 
@@ -42,13 +43,13 @@ def fetch_latest():
             if r.status != 200:
                 return None
             data = json.loads(r.read(MAX_BYTES).decode("utf-8"))
-    except (OSError, ValueError) as e:  # URLError, HTTPError and timeouts are OSError; bad JSON and bad bytes are ValueError
+    except Exception as e:  # offline, timeout, HTTP error, cut-off body, bad JSON, absurdly nested JSON: all mean "no answer"
         log.info("update check: no answer (%s)", type(e).__name__)
         return None
     if not isinstance(data, dict) or data.get("draft") or data.get("prerelease"):
         return None
     tag, url = data.get("tag_name"), data.get("html_url")
-    if parse(tag) is None or not isinstance(url, str) or not url.startswith(PAGE_PREFIX):
+    if parse(tag) is None or not safe_page(url):
         return None
     log.info("update check: latest release is %s", tag)
     return tag, url
@@ -61,4 +62,4 @@ def newer_release_url(current):
 
 
 def safe_page(url):
-    return isinstance(url, str) and url.startswith(PAGE_PREFIX)
+    return isinstance(url, str) and PAGE_RE.fullmatch(url) is not None

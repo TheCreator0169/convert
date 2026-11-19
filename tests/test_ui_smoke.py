@@ -145,9 +145,11 @@ class UiSmoke(unittest.TestCase):
         from convert_win import settings, update_check as uc
         win = self.win
         win.st["update_check"], win.st["last_update_check"] = True, 0
-        with mock.patch.object(uc, "fetch_latest", return_value=None):
+        import threading
+        asked = threading.Event()
+        with mock.patch.object(uc, "fetch_latest", side_effect=lambda: asked.set()):  # returns None
             self.assertTrue(win.start_update_check())
-            __import__("time").sleep(0.2)
+            self.assertTrue(asked.wait(3))  # the worker ran; no fixed sleep
             QApplication.processEvents()
         self.assertTrue(win.update_notice.isHidden())
         self.assertFalse(uc.due(settings.load()["last_update_check"]))  # the attempt is on record
@@ -161,10 +163,24 @@ class UiSmoke(unittest.TestCase):
         back = settings.load()
         self.assertIs(back["update_check"], False)
         self.assertEqual(back["last_update_check"], 123.5)
-        (settings._dir("APPDATA") / "settings.json").write_text('{"update_check": "no", "last_update_check": "x"}')
+        path = settings._dir("APPDATA") / "settings.json"
+        path.write_text('{"update_check": "no", "last_update_check": "x"}')
         back = settings.load()
-        self.assertIs(back["update_check"], True)  # only a real false turns it off
+        self.assertIs(back["update_check"], False)  # anything but true is read as "off": the user tried to opt out
         self.assertEqual(back["last_update_check"], 0)
+        for raw in ('"false"', "0", "null", "[]"):
+            path.write_text('{"update_check": %s}' % raw)
+            self.assertIs(settings.load()["update_check"], False, raw)
+        path.write_text("{}")
+        self.assertIs(settings.load()["update_check"], True)  # absent: on
+        for raw in ("NaN", "Infinity", "-Infinity"):
+            path.write_text('{"last_update_check": %s}' % raw)
+            self.assertEqual(settings.load()["last_update_check"], 0, raw)
+        st = settings.load()
+        st["update_check"] = False
+        settings.save(st)
+        self.assertFalse(path.with_name("settings.json.tmp").exists())  # written through a temp file, then replaced
+        self.assertIs(settings.load()["update_check"], False)
 
     def test_title_has_no_version(self):
         self.assertEqual(self.win.windowTitle(), "Convert")

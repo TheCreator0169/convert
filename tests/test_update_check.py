@@ -75,6 +75,18 @@ class Fetch(unittest.TestCase):
                     socket.timeout("slow"), ConnectionResetError(), OSError("x")):
             self.assertIsNone(self.fetch(error=err)[0], repr(err))
 
+    def test_nothing_escapes(self):  # audit: these used to raise out of the worker thread
+        import http.client
+        deep = Resp(b"[" * 600000)  # RecursionError in json
+        huge = answer(tag_name="v1" + "0" * 4400 + ".0.0")
+        arabic = answer(tag_name="v١.٢.٣")  # unicode digits are not version numbers
+        for r in (deep, huge, arabic):
+            self.assertIsNone(self.fetch(r)[0])
+        for err in (http.client.IncompleteRead(b"x"), http.client.BadStatusLine("x"), http.client.LineTooLong("x"),
+                    RuntimeError("anything")):
+            self.assertIsNone(self.fetch(error=err)[0], repr(err))
+        self.assertFalse(uc.newer("v1" + "0" * 4400 + ".0.0", "0.1.12"))
+
     def test_non_200_is_ignored(self):
         r = answer()
         r.status = 304
@@ -90,7 +102,11 @@ class Fetch(unittest.TestCase):
     def test_safe_page(self):
         self.assertTrue(uc.safe_page(PAGE))
         for u in ("", None, "http://github.com/TheCreator0169/convert/releases/", "file:///C:/Windows/System32/calc.exe",
-                  "https://github.com/TheCreator0169/other/releases/tag/v1"):
+                  "https://github.com/TheCreator0169/other/releases/tag/v1",
+                  PAGE + "\n", PAGE + "\x00", " " + PAGE, PAGE + " ", PAGE + "?x=1", PAGE + "#a",
+                  "https://GITHUB.com/TheCreator0169/convert/releases/tag/v1",
+                  "https://github.com\\@evil.example/TheCreator0169/convert/releases/",
+                  "https://github.com:444@evil.example/TheCreator0169/convert/releases/tag/v1"):
             self.assertFalse(uc.safe_page(u), u)
 
 

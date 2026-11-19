@@ -1,6 +1,7 @@
-"""Remembered options and the app log, in %APPDATA%\\Convert and %LOCALAPPDATA%\\Convert."""
+﻿"""Remembered options and the app log, in %APPDATA%\\Convert and %LOCALAPPDATA%\\Convert."""
 import json
 import logging
+import math
 import os
 import sys
 import time
@@ -44,12 +45,15 @@ def load():
         options[group] = {k: _coerce(mine.get(k, d), d) for k, d in defaults.items()}
     last = saved.get("last_update_check")
     return {"trash_originals": saved.get("trash_originals") is True, "options": options,
-            "update_check": saved.get("update_check") is not False,  # on unless the file says false
-            "last_update_check": last if isinstance(last, (int, float)) and not isinstance(last, bool) else 0}
+            "update_check": saved.get("update_check", True) is True,  # on when absent; any other value than true means off
+            "last_update_check": last if isinstance(last, (int, float)) and not isinstance(last, bool) and math.isfinite(last) else 0}
 
 
 def save(settings):
-    (_dir("APPDATA") / "settings.json").write_text(json.dumps(settings, indent=2), "utf-8")
+    path = _dir("APPDATA") / "settings.json"
+    tmp = path.with_name("settings.json.tmp")
+    tmp.write_text(json.dumps(settings, indent=2), "utf-8")
+    os.replace(tmp, path)  # atomic: a crash never leaves half a file (which would reset the update switch)
 
 
 def prune_logs(logs, days=LOG_DAYS):

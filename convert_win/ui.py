@@ -1,4 +1,4 @@
-"""The window: drop files, pick a format, convert. Conversion runs on a worker thread."""
+﻿"""The window: drop files, pick a format, convert. Conversion runs on a worker thread."""
 import ctypes
 import getpass
 import json
@@ -296,7 +296,7 @@ class Window(QWidget):
         except OSError:
             return False  # cannot record the attempt: better no check than one at every launch
         self.updater = UpdateCheck()
-        self.updater.found.connect(self.update_notice.show_for)
+        self.updater.found.connect(self.update_notice.show_for, Qt.QueuedConnection)  # the label is only touched on the GUI thread
         self.updater.start()
         return True
 
