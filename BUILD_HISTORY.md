@@ -142,3 +142,14 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 - Tests in source mode: 170, 1 skipped, all pass; the two new ones fail on the previous ui.py. Frozen smoke test inside the build passed.
 - Measured on the real window: Advanced off, on, off again: 387, 433, 387 px high, names visible in the first and last; after Clear the window is 291 px and the bar value 0.
 - Not verified: how it looks on the user's screen, the frozen window itself, install and upgrade with this setup.
+
+## v0.1.13 (2026-11-19, not tagged, not published)
+
+- Commits `11686c4` and `6d13974`, then the history. Built with `build.ps1 v0.1.13`.
+- Convert.exe sha256 `6085edc1a8f8f50d2d39d45b489c5395fc6d23e32c22033eb3bf1b633ddeeae0`.
+- Convert-Setup-v0.1.13.exe sha256 `ffe2c1a66cf9c587e73b58b2896027895d17e5c35c9e2024774c60acb5d3423e`.
+- New: a daily update notice (`update_check.py`). Once per 24 h while the app is open, one anonymous GET to the GitHub releases API on a daemon thread; a newer release shows "A new version is available" on the right above the drop box (blue, underlined on hover), a click opens the release page (checked to be a page of this repo). Nothing is downloaded or installed. Off with `update_check: false` in `settings.json`. `CLAUDE.md` and the README no longer say "no network call". Plan: `docs\update-check-plan.md`.
+- Tests in source mode: 181, 1 skipped, all pass, no real network (`urlopen` replaced); three mutations of the code were each caught. The first run of the full suite failed one old test (settings keys): fixed in `6d13974` before this build.
+- Frozen exe, temp profile, real network: the log says "update check: latest release is v0.1.12" and the attempt time is saved; the process was stopped by its PID.
+- Measured: the notice is 17 px high and the window grows from 291 to 314 px while it shows; it takes no room while hidden; aligned right.
+- Not verified: the notice in the frozen window (the real network answer is "no newer release", so it stayed hidden), a corporate proxy, how it looks on the user's screen, install and upgrade with this setup.
