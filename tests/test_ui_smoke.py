@@ -76,6 +76,38 @@ class UiSmoke(unittest.TestCase):
         win.open_btn.hide()
         self.assertTrue(win.version.isVisible())
 
+    def test_advanced_toggle_keeps_the_option_names_visible(self):
+        win = self.win
+        win.show()
+        win.add_files([self.png])
+        QApplication.processEvents()
+        fields = list(win.opt_widgets.values())
+        labels = [win.form.labelForField(w) for w in fields]
+        self.assertTrue(fields and all(l.isVisible() for l in labels))  # preview: names shown, fields hidden
+        self.assertFalse(any(w.isVisible() for w in fields))
+        for on in (True, False, True, False):  # switching on and off must not lose the names
+            win.adv.setChecked(on)
+            QApplication.processEvents()
+            self.assertTrue(all(l.isVisible() for l in labels), f"labels lost after setChecked({on})")
+            self.assertEqual([w.isVisible() for w in fields], [on] * len(fields))
+
+    def test_progress_bar_goes_back_to_empty_on_clear_and_on_new_files(self):
+        win = self.win
+        win.add_files([self.png])
+        win.bar.setRange(0, 1)
+        win.bar.setValue(1)  # what _done leaves behind: a full bar
+        win._clear()
+        self.assertEqual(win.bar.value(), 0)
+        win.add_files([self.png])
+        win.bar.setValue(1)
+        other = self.dir / "other.png"
+        other.write_bytes(self.png.read_bytes())
+        win.add_files([other])  # a new file starts a new batch
+        self.assertEqual(win.bar.value(), 0)
+        win.bar.setValue(1)
+        win.add_files([])  # nothing added: the finished bar is left alone
+        self.assertEqual(win.bar.value(), 1)
+
     def test_title_has_no_version(self):
         self.assertEqual(self.win.windowTitle(), "Convert")
 

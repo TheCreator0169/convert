@@ -179,8 +179,8 @@ class Window(QWidget):
         self.form.setLabelAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.adv.setLayout(self.form)
-        self.adv.toggled.connect(lambda on: [self.form.itemAt(i).widget().setVisible(on)
-                                             for i in range(self.form.count()) if self.form.itemAt(i).widget()])
+        # Unchecked: the option names stay visible as a preview, only the fields are hidden. Checked: fields shown.
+        self.adv.toggled.connect(lambda on: [w.setVisible(on) for w in self.opt_widgets.values()])
         self.trash = QCheckBox("Move originals to the Recycle Bin after a successful conversion")
         self.trash.setChecked(self.st["trash_originals"])
         self.msg = MessageLabel()
@@ -248,11 +248,18 @@ class Window(QWidget):
             self.pending += [str(p) for p in paths]
             self.msg.setText("New files will be added when the current batch ends.")
             return
+        before = len(self.files)
         for p in paths:
             p = str(Path(p))
             if Path(p).is_file() and file_type(p) in SUPPORTED and p not in self.files:
                 self.files.append(p)
+        if len(self.files) > before:
+            self._reset_bar()  # a new batch: the bar of the last one is stale
         self._refresh()
+
+    def _reset_bar(self):
+        self.bar.setRange(0, 1)
+        self.bar.setValue(0)
 
     def dragEnterEvent(self, e):
         if e.mimeData().hasUrls():
@@ -263,6 +270,7 @@ class Window(QWidget):
 
     def _clear(self):
         self.files, self.outs = [], []
+        self._reset_bar()  # Clear after a finished batch: the bar goes back to empty, not full blue
         self._refresh()
 
     def _missing_ffmpeg(self):
