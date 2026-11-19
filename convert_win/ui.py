@@ -10,12 +10,12 @@ import time
 import webbrowser
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QObject, QRect, QRectF, QSize, QThread, QTimer, Qt, Signal
+from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QRectF, QSize, QThread, QTimer, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QKeySequence, QPainter, QPen, QShortcut
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QFileDialog, QFormLayout, QGridLayout,
+from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QApplication, QCheckBox, QComboBox, QFileDialog, QFormLayout, QGridLayout,
                                QGroupBox, QHBoxLayout, QLabel, QLayout, QLineEdit, QListView, QListWidget, QListWidgetItem,
-                               QProgressBar, QPushButton, QSpinBox, QStyle, QStyledItemDelegate, QVBoxLayout, QWidget)
+                               QMenu, QProgressBar, QPushButton, QSpinBox, QStyle, QStyledItemDelegate, QVBoxLayout, QWidget)
 
 from . import settings, theme, update_check
 from .converter import _is_network_path, convert_file, describe, scrub
@@ -57,6 +57,8 @@ class UpdateNotice(QLabel):
         self.setObjectName("update")
         self.setAlignment(Qt.AlignRight)  # on the right, above the drop box
         self.setCursor(Qt.PointingHandCursor)
+        self.setAccessibleName("A new version is available")
+        self.setAccessibleDescription("Press Enter to open the release page.")
         self.url = ""
         self.hide()
 
@@ -70,6 +72,48 @@ class UpdateNotice(QLabel):
         f.setUnderline(on)
         self.setFont(f)
 
+    def _open(self):
+        """The one way to open the page, by click or by key: only a page of this project's releases."""
+        if update_check.safe_page(self.url):
+            webbrowser.open(self.url)
+
+    def showEvent(self, e):
+        self.setFocusPolicy(Qt.TabFocus)  # reachable by Tab only while it is shown; a click does not draw the outline
+        super().showEvent(e)
+
+    def hideEvent(self, e):
+        self.setFocusPolicy(Qt.NoFocus)
+        super().hideEvent(e)
+
+    def event(self, e):
+        if e.type() == QEvent.ShortcutOverride and e.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space):
+            e.accept()  # the window's Enter shortcut (Convert) must not fire while this has the focus
+            return True
+        return super().event(e)
+
+    def keyPressEvent(self, e):
+        if e.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space):
+            self._open()
+        else:
+            super().keyPressEvent(e)
+
+    def focusInEvent(self, e):
+        super().focusInEvent(e)
+        self.update()
+
+    def focusOutEvent(self, e):
+        super().focusOutEvent(e)
+        self.update()
+
+    def paintEvent(self, e):
+        super().paintEvent(e)
+        if self.hasFocus():  # a 1 px accent outline; the text does not move
+            p = QPainter(self)
+            p.setPen(QPen(QColor(theme.PALETTE["accent"]), 1))
+            p.setBrush(Qt.NoBrush)
+            p.drawRect(QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5))
+            p.end()
+
     def enterEvent(self, e):
         self._underline(True)
         super().enterEvent(e)
@@ -79,8 +123,8 @@ class UpdateNotice(QLabel):
         super().leaveEvent(e)
 
     def mousePressEvent(self, e):
-        if e.button() == Qt.LeftButton and update_check.safe_page(self.url):
-            webbrowser.open(self.url)
+        if e.button() == Qt.LeftButton:
+            self._open()
 
 
 class UpdateCheck(QObject):
@@ -105,6 +149,14 @@ def _asset(name):
 TILE = QSize(88, 64)   # one file: type badge on top, name below
 GRID = QSize(94, 70)   # tile plus 3 px around it
 PER_ROW, MAX_ROWS = 4, 3
+STATE_ROLE = Qt.UserRole + 1  # the file's state on its tile: waiting, working, done or failed
+STATE_TEXT = {"waiting": ("Waiting", "muted"), "working": ("Working", "accent"), "done": ("Done", "ok"),
+              "failed": ("Failed", "error")}  # label and palette token of each state
+
+
+def _kind(path):
+    """The type badge of a tile: the extension in capitals, FILE when there is none."""
+    return (Path(path).suffix[1:5] or "FILE").upper()
 
 
 def _close_rect(cell):
@@ -121,10 +173,12 @@ class TileDelegate(QStyledItemDelegate):
         pal = theme.PALETTE
         r = option.rect.adjusted(3, 3, -3, -3)
         hot = bool(option.state & (QStyle.State_MouseOver | QStyle.State_Selected))
+        state = index.data(STATE_ROLE) or "waiting"
         p.save()
         p.setRenderHint(QPainter.Antialiasing)
         p.setBrush(QColor(pal["tile"]))
-        p.setPen(QPen(QColor(pal["accent"] if hot else pal["tile"]), 1))
+        edge = pal["accent"] if hot else pal["error"] if state == "failed" else pal["tile"]  # hover/selection wins over failed
+        p.setPen(QPen(QColor(edge), 1))
         p.drawRoundedRect(QRectF(r).adjusted(0.5, 0.5, -0.5, -0.5), 6, 6)
         font = QFont(option.font)
         font.setPixelSize(10)
@@ -153,6 +207,11 @@ class TileDelegate(QStyledItemDelegate):
         p.setPen(QColor(pal["text"]))
         name = QFontMetrics(font).elidedText(index.data(Qt.DisplayRole), Qt.ElideMiddle, r.width() - 16)
         p.drawText(QRect(r.left() + 8, r.top() + 32, r.width() - 16, 22), Qt.AlignLeft | Qt.AlignVCenter, name)
+        label, colour = STATE_TEXT.get(state, STATE_TEXT["waiting"])
+        font.setPixelSize(9)
+        p.setFont(font)
+        p.setPen(QColor(pal[colour]))
+        p.drawText(QRect(option.rect.left() + 11, option.rect.top() + 57, 72, 10), Qt.AlignLeft | Qt.AlignVCenter, label)
         p.restore()
 
 
@@ -258,8 +317,10 @@ def _choice_text(key, c):
 
 
 class Worker(QThread):
-    progress = Signal(int, str)
-    done = Signal(list, list, list)
+    progress = Signal(int, str)  # index in the batch, file name: this file is being converted now
+    converted = Signal(int)  # index in the batch: this file was written
+    failed = Signal(int, str)  # index in the batch, message: this file failed (the batch goes on)
+    done = Signal(list, list, list)  # outputs, errors as (name, message), notes: the status line, as before
 
     def __init__(self, files, fmt_id, options, trash):
         super().__init__()
@@ -280,8 +341,12 @@ class Worker(QThread):
                 self.cancelled = True
                 break
             except Exception as e:  # one bad file must not stop the batch
-                log.error("failed %s: %s", Path(f).name, scrub(describe(e), f))
-                errs.append((Path(f).name, describe(e)))
+                msg = describe(e)
+                log.error("failed %s: %s", Path(f).name, scrub(msg, f))
+                errs.append((Path(f).name, msg))
+                self.failed.emit(i, msg)
+            else:
+                self.converted.emit(i)
         self.done.emit([str(o) for o in outs], errs, notes)
 
 
@@ -294,6 +359,8 @@ class Window(QWidget):
         self.setAcceptDrops(True)
         self.setWindowFlag(Qt.WindowMaximizeButtonHint, False)  # the height follows the content; the user never resizes
         self.files, self.worker, self.outs, self.pending = [], None, [], []
+        self.states = {}  # full path -> "waiting" | "working" | "done" | "failed"; a missing path is waiting
+        self.fail_msgs = {}  # full path -> the message of its failure
         self.save_error = ""
         self.st = settings.load()
         self.opt_widgets = {}
@@ -301,12 +368,20 @@ class Window(QWidget):
         self.list = DropBox("Drop files here, or right-click files in Explorer and choose Convert.")
         self.list.remove_requested.connect(self._remove)
         self.list.add_requested.connect(self._pick)
+        self.list.setAccessibleName("Files to convert")
+        self.list.setAccessibleDescription("Drop files here or click an empty area to add files. Ctrl+O also adds files. "
+                                           "Select a file and press Delete to remove it.")
         self.hint = self.list.hint
         self.fmt = QComboBox()
         self.fmt.setObjectName("fmt")
         self.fmt.setPlaceholderText("Add files first")
+        self.fmt.setAccessibleName("Convert to")
+        self.fmt.setAccessibleDescription("Output format")
         self.fmt.currentIndexChanged.connect(self._build_options)
+        self.fmt_label = QLabel("Convert to")
+        self.fmt_label.setBuddy(self.fmt)
         self.adv = QGroupBox("Advanced")
+        self.adv.setAccessibleName("Advanced")
         self.adv.setCheckable(True)
         self.adv.setChecked(False)
         self.form = QFormLayout()
@@ -323,20 +398,32 @@ class Window(QWidget):
         self.msg.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.bar = QProgressBar()
         self.bar.setTextVisible(False)
+        self.bar.setAccessibleName("Conversion progress")
         self.go = QPushButton("Convert")
         self.go.setObjectName("primary")
         self.go.clicked.connect(self._start)
+        self.go.setAccessibleName("Convert")
+        self.go.setAccessibleDescription("Convert the listed files to the chosen format")
         self.stop = QPushButton("Cancel")
         self.stop.clicked.connect(self._cancel)
+        self.stop.setAccessibleName("Cancel")
+        self.stop.setAccessibleDescription("Stop after the current file")
         self.stop.hide()
         self.open_btn = QPushButton("Open folder")
         self.open_btn.clicked.connect(self._open_folder)
+        self.open_btn.setAccessibleName("Open folder")
+        self.open_btn.setAccessibleDescription("Open the folder with the converted files")
         self.open_btn.hide()
+        self.folder_menu = QMenu(self)  # one entry per output folder, shown when there are two or more
         self.logs_btn = QPushButton("Open log folder")
         self.logs_btn.clicked.connect(lambda: os.startfile(str(settings.log_dir())))
+        self.logs_btn.setAccessibleName("Open log folder")
+        self.logs_btn.setAccessibleDescription("Open the folder with the log file")
         self.logs_btn.hide()
         self.clear = QPushButton("Clear")
         self.clear.clicked.connect(self._clear)
+        self.clear.setAccessibleName("Clear")
+        self.clear.setAccessibleDescription("Remove all files from the list")
 
         for b in (self.clear, self.go):
             b.setFixedSize(80, 31)  # both bottom buttons as big as Convert; the text stays centred and keeps its size
@@ -362,7 +449,7 @@ class Window(QWidget):
         lay = QVBoxLayout(self)
         lay.addWidget(self.update_notice)
         lay.addWidget(self.list)
-        lay.addWidget(QLabel("Convert to"))
+        lay.addWidget(self.fmt_label)
         lay.addWidget(self.fmt)
         lay.addWidget(self.adv)
         lay.addWidget(self.trash)
@@ -395,6 +482,11 @@ class Window(QWidget):
         return True
 
     def eventFilter(self, obj, event):
+        if obj is self.open_btn and event.type() in (QEvent.ShortcutOverride, QEvent.KeyPress) and event.key() in (Qt.Key_Return, Qt.Key_Enter):
+            if event.type() == QEvent.KeyPress:
+                self._open_folder()  # Enter on the focused button: the same as a click, the menu when there are several
+            event.accept()
+            return True
         # The version is hidden while Cancel / Open folder / Open log folder are shown: they would not fit beside it.
         if event.type() in (QEvent.ShowToParent, QEvent.HideToParent):
             extra = (self.logs_btn, self.open_btn, self.stop)
@@ -455,14 +547,19 @@ class Window(QWidget):
         if self.worker or not 0 <= row < len(self.files):
             return
         fid = self.fmt.currentData()  # the format chosen now stays, if the rest still offers it
-        del self.files[row]
+        path = self.files.pop(row)
+        self.states.pop(path, None)
+        self.fail_msgs.pop(path, None)
         self._refresh(keep=fid)
         if self.files:
             self.list.setCurrentRow(min(row, len(self.files) - 1))
 
     def _enter(self):
         """Enter = Convert, unless a list popup is open or a field (spin box, combo box, text) has the focus."""
-        if QApplication.activePopupWidget() or isinstance(QApplication.focusWidget(), (QSpinBox, QComboBox, QLineEdit)):
+        focus = QApplication.focusWidget()
+        if QApplication.activePopupWidget() or isinstance(focus, (QSpinBox, QComboBox, QLineEdit)):
+            return
+        if isinstance(focus, QAbstractButton) and focus is not self.go:  # Enter on Clear, Cancel... is not "Convert"
             return
         if self.go.isEnabled() and not self.worker:
             self._start()
@@ -472,9 +569,30 @@ class Window(QWidget):
             self._cancel()
 
     def _clear(self):
+        if self.worker:  # the list is in use by the running batch
+            return
         self.files, self.outs = [], []
+        self.states, self.fail_msgs = {}, {}
         self._reset_bar()  # Clear after a finished batch: the bar goes back to empty, not full blue
         self._refresh()
+
+    def _tile(self, item, path):
+        """Sets the state (for the delegate) and the tooltip of one tile from self.states and self.fail_msgs."""
+        state = self.states.get(path, "waiting")
+        item.setData(STATE_ROLE, state)
+        item.setData(Qt.AccessibleTextRole, f"{Path(path).name}, {_kind(path)}, {state}")  # kept in step with the state
+        item.setToolTip(f"{path}\n{self.fail_msgs.get(path, '')}" if state == "failed" else path)
+
+    def _set_state(self, i, state, msg=None):
+        """Changes one running file's tile in place: no rebuild of the list during a run."""
+        if not 0 <= i < len(self.files) or self.list.item(i) is None:
+            return
+        path = self.files[i]
+        self.states[path] = state
+        if msg is not None:
+            self.fail_msgs[path] = msg
+        self._tile(self.list.item(i), path)
+        self.list.viewport().update()
 
     def _missing_ffmpeg(self):
         return any(file_type(f) in ("audio", "video") for f in self.files) and not find_tool("ffmpeg")
@@ -485,8 +603,8 @@ class Window(QWidget):
         self.list.close_hot = -1  # the pointer may be over a different tile now
         for f in self.files:
             item = QListWidgetItem(Path(f).name)
-            item.setData(Qt.UserRole, (Path(f).suffix[1:5] or "FILE").upper())
-            item.setToolTip(f)
+            item.setData(Qt.UserRole, _kind(f))
+            self._tile(item, f)
             self.list.addItem(item)
         self.hint.setVisible(not self.files)
         rows = -(-len(self.files) // PER_ROW)  # tiles per row: 4; the box grows one row at a time up to 3 rows, then scrolls
@@ -536,6 +654,7 @@ class Window(QWidget):
         group = self._group()
         self.adv.setVisible(group is not None)
         if group is None:
+            self._set_tab_order()
             return
         for key, val in self.st["options"][group].items():
             if isinstance(val, bool):
@@ -555,8 +674,19 @@ class Window(QWidget):
                 w.setRange(lo, hi)
                 w.setValue(max(lo, min(hi, val)))  # a hand-edited huge number must not overflow the spin box
             self.opt_widgets[key] = w
+            w.setAccessibleName(LABEL[key])
             self.form.addRow(LABEL[key], w)
+            self.form.labelForField(w).setBuddy(w)  # the row's label names its field for screen readers
             w.setVisible(self.adv.isChecked())
+        self._set_tab_order()
+
+    def _set_tab_order(self):
+        """Tab goes: update notice, drop box, format, Advanced, option fields, trash, Clear, log folder, Open folder, Cancel, Convert.
+        Hidden widgets are skipped by Qt. Called again after each rebuild of the option fields."""
+        chain = [self.update_notice, self.list, self.fmt, self.adv, *self.opt_widgets.values(), self.trash, self.clear,
+                 self.logs_btn, self.open_btn, self.stop, self.go]
+        for before, after in zip(chain, chain[1:]):
+            QWidget.setTabOrder(before, after)
 
     def _collect(self):
         out = {}
@@ -577,10 +707,17 @@ class Window(QWidget):
         except OSError as e:  # the conversion still runs; the status line shows it after the first file
             log.warning("settings not saved: %s", e)
             self.save_error = f"Settings could not be saved ({e})."
+        self.states, self.fail_msgs = {f: "waiting" for f in self.files}, {}  # a new run: every file waits again
+        for i, f in enumerate(self.files):
+            self._tile(self.list.item(i), f)
+        self.list.viewport().update()
         self.worker = Worker(list(self.files), self.fmt.currentData(), self.st["options"], self.trash.isChecked())
         self.worker.progress.connect(self._progress)
+        self.worker.converted.connect(self._converted)
+        self.worker.failed.connect(self._failed)
         self.worker.done.connect(self._done)
         self.go.setEnabled(False)
+        self.clear.setEnabled(False)
         self.stop.show()
         self.bar.setRange(0, len(self.files) if len(self.files) > 1 else 0)
         self.worker.start()
@@ -594,7 +731,14 @@ class Window(QWidget):
 
     def _progress(self, i, name):
         self.bar.setValue(i)
+        self._set_state(i, "working")
         self._say(f"Converting {name}  ({i + 1}/{len(self.files)})", "muted")
+
+    def _converted(self, i):
+        self._set_state(i, "done")
+
+    def _failed(self, i, msg):
+        self._set_state(i, "failed", msg)
 
     def _cancel(self):
         if self.worker:
@@ -612,6 +756,11 @@ class Window(QWidget):
         self.stop.setEnabled(True)
         if w.trash:
             self.files = [f for f in self.files if Path(f).exists()]
+        for f, s in self.states.items():  # interrupted or not reached by Cancel: waiting again
+            if s == "working":
+                self.states[f] = "waiting"
+        self.states = {f: s for f, s in self.states.items() if f in self.files}  # moved to the Recycle Bin: gone
+        self.fail_msgs = {f: m for f, m in self.fail_msgs.items() if f in self.files}
         if errs:
             text = f"{len(outs)} file(s) written, {len(errs)} failed:\n" + "\n".join(f"- {n}: {m}" for n, m in errs)
         elif w.cancelled:
@@ -633,8 +782,28 @@ class Window(QWidget):
         self.logs_btn.setVisible(bool(errs))
 
     def _open_folder(self):
-        if self.outs:
-            os.startfile(str(Path(self.outs[0]).parent))
+        """One output folder: opened directly. Two to eight: a menu under the button lists them. More: the first eight and a count."""
+        folders = []
+        for o in self.outs:  # distinct folders, in the order the files were written
+            d = str(Path(o).parent)
+            if d not in folders:
+                folders.append(d)
+        if not folders:
+            return
+        folders = [d for d in folders if os.path.isdir(d) and not _is_network_path(d)]  # gone or remote by now: not opened
+        if not folders:
+            self._say("The output folder no longer exists.", "muted")
+            return
+        if len(folders) == 1:
+            os.startfile(folders[0])
+            return
+        self.folder_menu.clear()
+        for d in folders[:8]:
+            act = self.folder_menu.addAction(d.replace("&", "&&"))  # & would make a mnemonic in a menu
+            act.triggered.connect(lambda _checked=False, d=d: os.startfile(d))
+        if len(folders) > 8:
+            self.folder_menu.addAction(f"... and {len(folders) - 8} more").setEnabled(False)
+        self.folder_menu.popup(self.open_btn.mapToGlobal(QPoint(0, self.open_btn.height())))
 
     def closeEvent(self, e):
         if self.worker:

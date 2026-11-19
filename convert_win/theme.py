@@ -39,6 +39,10 @@ def stylesheet(p=PALETTE, chevron="", chevron_up=""):
     QPushButton:disabled {{ color: {p['muted']}; }}
     QPushButton#primary {{ background: {p['accent']}; color: {p['accent_text']}; border: none; font-weight: 600; }}
     QPushButton#primary:disabled {{ background: {p['border']}; color: {p['muted']}; }}
+    QMenu {{ background: {p['panel']}; border: 1px solid {p['border']}; border-radius: 6px; padding: 4px; color: {p['text']}; }}
+    QMenu::item {{ background: transparent; padding: 7px 16px; }}
+    QMenu::item:selected {{ background: {p['border']}; }}
+    QMenu::item:disabled {{ color: {p['muted']}; }}
     QProgressBar {{ background: {p['panel']}; border: none; border-radius: 4px; height: 8px; text-align: center; }}
     QProgressBar::chunk {{ background: {p['accent']}; border-radius: 4px; }}
     QLabel#muted {{ color: {p['muted']}; }}
