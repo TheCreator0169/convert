@@ -1,4 +1,4 @@
-# Build history
+﻿# Build history
 
 ## v0.1.0 (2026-11-18, not tagged, not committed)
 
@@ -95,7 +95,7 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 - Frozen smoke test (inside the build, temp profile): image to WebP, txt to PDF, md to DOCX, DOCX to PDF, PDF to PNG and TXT, MP4 to MP3, MKV and GIF all exit 0 with a non-empty output; runtime log frozen and free of errors.
 - Not verified: the CI on GitHub (never run; `test_single_instance` may fail on the runner), H9 hashes (needs pip-tools), the window, install, right-click and uninstall with this installer, SmartScreen (not signed).
 
-## v0.1.8 (2026-11-19, not tagged, not published)
+## v0.1.8 (2026-11-19, tagged and published)
 
 - Commits `b202d67` (fix), `f709cf9` (version 0.1.8), then the history. Built with `build.ps1 v0.1.8`.
 - Convert.exe sha256 `c0ecc3a439ef59ba8e05c433da9cf9605c57d75862af06e6941fa2bfe55454df`.
