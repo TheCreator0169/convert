@@ -32,6 +32,10 @@ Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 [CustomMessages]
 english.DeleteSettings=Also delete your Convert settings?
 french.DeleteSettings=Supprimer aussi les parametres de Convert ?
+english.FfmpegFound=ffmpeg was found: audio and video conversion is available.
+french.FfmpegFound=ffmpeg a ete trouve : la conversion audio et video est disponible.
+english.FfmpegMissing=ffmpeg was not found. Images and documents work now; audio and video need ffmpeg. To install it, open a terminal and run: winget install Gyan.FFmpeg  (then restart Convert).
+french.FfmpegMissing=ffmpeg est introuvable. Les images et les documents fonctionnent; l'audio et la video demandent ffmpeg. Pour l'installer, ouvrez un terminal et lancez : winget install Gyan.FFmpeg  (puis relancez Convert).
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -60,6 +64,21 @@ Filename: "{app}\Convert.exe"; Parameters: "--uninstall-menu"; Flags: runhidden;
 Type: filesandordirs; Name: "{localappdata}\Convert"
 
 [Code]
+{ Last page: say whether ffmpeg is there. It is not bundled; nothing is downloaded or installed here. }
+procedure CurPageChanged(CurPageID: Integer);
+var
+  Note: String;
+begin
+  if CurPageID = wpFinished then
+  begin
+    if FileSearch('ffmpeg.exe', GetEnv('PATH')) <> '' then
+      Note := CustomMessage('FfmpegFound')
+    else
+      Note := CustomMessage('FfmpegMissing');
+    WizardForm.FinishedLabel.Caption := WizardForm.FinishedLabel.Caption + #13#10#13#10 + Note;
+  end;
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if (CurUninstallStep = usPostUninstall) and DirExists(ExpandConstant('{userappdata}\Convert')) then
