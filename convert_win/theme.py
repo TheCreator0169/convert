@@ -1,6 +1,6 @@
 """Colours and the one stylesheet. No colour literal anywhere else."""
 PALETTE = {"bg": "#1b1d22", "panel": "#252830", "border": "#343844", "text": "#e8eaf0", "muted": "#9aa1b2",
-           "accent": "#4c8dff", "accent_text": "#ffffff", "error": "#ff6b6b", "ok": "#4cd08a"}
+           "tile": "#2f3340", "accent": "#4c8dff", "accent_text": "#ffffff", "error": "#ff6b6b", "ok": "#4cd08a"}
 
 
 def stylesheet(p=PALETTE, chevron=""):
@@ -11,6 +11,10 @@ def stylesheet(p=PALETTE, chevron=""):
     QListWidget, QComboBox, QSpinBox, QGroupBox {{ background: {p['panel']}; border: 1px solid {p['border']};
         border-radius: 6px; padding: 4px; }}
     QListWidget#drop {{ border: 1px dashed {p['border']}; }}
+    QListWidget#drop QScrollBar:vertical {{ background: transparent; width: 8px; margin: 2px; }}
+    QListWidget#drop QScrollBar::handle:vertical {{ background: {p['border']}; border-radius: 4px; min-height: 24px; }}
+    QListWidget#drop QScrollBar::add-line:vertical, QListWidget#drop QScrollBar::sub-line:vertical {{ height: 0; }}
+    QListWidget#drop QScrollBar::add-page:vertical, QListWidget#drop QScrollBar::sub-page:vertical {{ background: transparent; }}
     QLabel#hint {{ background: transparent; color: {p['muted']}; }}
     QComboBox#fmt {{ border-radius: 8px; padding: 0 12px; min-height: 34px; }}
     QComboBox#fmt:hover, QComboBox#fmt:on {{ border-color: {p['accent']}; }}

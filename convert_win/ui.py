@@ -8,11 +8,12 @@ import sys
 import threading
 from pathlib import Path
 
-from PySide6.QtCore import QThread, QTimer, Qt, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import QRect, QRectF, QSize, QThread, QTimer, Qt, Signal
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QPen
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
-from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel,
-                               QListWidget, QProgressBar, QPushButton, QSpinBox, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QFormLayout, QGroupBox, QHBoxLayout,
+                               QLabel, QLayout, QListView, QListWidget, QListWidgetItem, QProgressBar, QPushButton,
+                               QSpinBox, QStyle, QStyledItemDelegate, QVBoxLayout, QWidget)
 
 from . import settings, theme
 from .converter import convert_file, describe, scrub
@@ -42,11 +43,61 @@ def _asset(name):
     return p.as_posix() if p.is_file() else ""
 
 
+TILE = QSize(88, 64)   # one file: type badge on top, name below
+GRID = QSize(94, 70)   # tile plus 3 px around it
+PER_ROW, MAX_ROWS = 4, 3
+
+
+class TileDelegate(QStyledItemDelegate):
+    def sizeHint(self, option, index):
+        return TILE
+
+    def paint(self, p, option, index):
+        pal = theme.PALETTE
+        r = option.rect.adjusted(3, 3, -3, -3)
+        hot = bool(option.state & QStyle.State_MouseOver)
+        p.save()
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setBrush(QColor(pal["tile"]))
+        p.setPen(QPen(QColor(pal["accent"] if hot else pal["tile"]), 1))
+        p.drawRoundedRect(QRectF(r).adjusted(0.5, 0.5, -0.5, -0.5), 6, 6)
+        font = QFont(option.font)
+        font.setPixelSize(10)
+        font.setBold(True)
+        p.setFont(font)
+        kind = str(index.data(Qt.UserRole) or "")
+        badge = QRect(r.left() + 8, r.top() + 8, QFontMetrics(font).horizontalAdvance(kind) + 12, 16)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(pal["accent"]))
+        p.drawRoundedRect(badge, 4, 4)
+        p.setPen(QColor(pal["accent_text"]))
+        p.drawText(badge, Qt.AlignCenter, kind)
+        font.setBold(False)
+        font.setPixelSize(11)
+        p.setFont(font)
+        p.setPen(QColor(pal["text"]))
+        name = QFontMetrics(font).elidedText(index.data(Qt.DisplayRole), Qt.ElideMiddle, r.width() - 16)
+        p.drawText(QRect(r.left() + 8, r.top() + 32, r.width() - 16, 22), Qt.AlignLeft | Qt.AlignVCenter, name)
+        p.restore()
+
+
 class DropBox(QListWidget):
-    """The file list. While it is empty, a hint sits in the middle of it."""
+    """The file list as tiles that wrap like text. While it is empty, a hint sits in the middle of it."""
     def __init__(self, hint_text):
         super().__init__()
         self.setObjectName("drop")
+        self.setViewMode(QListView.IconMode)
+        self.setFlow(QListView.LeftToRight)
+        self.setWrapping(True)
+        self.setResizeMode(QListView.Adjust)
+        self.setMovement(QListView.Static)
+        self.setSelectionMode(QAbstractItemView.NoSelection)
+        self.setGridSize(GRID)
+        self.setSpacing(0)
+        self.setItemDelegate(TileDelegate(self))
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.setFixedWidth(418)
         self.hint = QLabel(hint_text, self)
         self.hint.setObjectName("hint")
         self.hint.setAlignment(Qt.AlignCenter)
@@ -97,8 +148,7 @@ class Window(QWidget):
         root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))  # frozen: bundled data folder
         self.setWindowIcon(QIcon(str(root / "assets" / "logo.png")))
         self.setAcceptDrops(True)
-        self.setMinimumSize(440, 400)
-        self.resize(440, 400)
+        self.setWindowFlag(Qt.WindowMaximizeButtonHint, False)  # the height follows the content; the user never resizes
         self.files, self.worker, self.outs, self.pending = [], None, [], []
         self.save_error = ""
         self.st = settings.load()
@@ -154,8 +204,9 @@ class Window(QWidget):
         lay.addWidget(self.trash)
         lay.addWidget(self.bar)
         lay.addWidget(self.msg)
-        lay.addStretch(1)
         lay.addLayout(row)
+        lay.setContentsMargins(11, 11, 11, 11)
+        lay.setSizeConstraint(QLayout.SetFixedSize)  # 440 px wide (the box is 418 px), as high as its content, always
         self._refresh()
 
     # --- files -------------------------------------------------------------------------------------------------
@@ -186,9 +237,14 @@ class Window(QWidget):
 
     def _refresh(self):
         self.list.clear()
-        self.list.addItems([Path(f).name for f in self.files])
+        for f in self.files:
+            item = QListWidgetItem(Path(f).name)
+            item.setData(Qt.UserRole, (Path(f).suffix[1:5] or "FILE").upper())
+            item.setToolTip(f)
+            self.list.addItem(item)
         self.hint.setVisible(not self.files)
-        self.list.setFixedHeight(min(170, max(110, 12 + 26 * len(self.files))))  # landscape box: 110 px empty, 170 px at most
+        rows = -(-len(self.files) // PER_ROW)  # tiles per row: 4; the box grows one row at a time up to 3 rows, then scrolls
+        self.list.setFixedHeight(max(110, min(rows, MAX_ROWS) * GRID.height() + 18))
         self.fmt.blockSignals(True)
         self.fmt.clear()
         if self._missing_ffmpeg():

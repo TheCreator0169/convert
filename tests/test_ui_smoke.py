@@ -39,6 +39,26 @@ class UiSmoke(unittest.TestCase):
         self.assertEqual(self.win.fmt.currentIndex(), 0)
         self.assertIn("quality", self.win.opt_widgets)
 
+    def test_window_height_follows_the_content_and_is_not_resizable(self):
+        win = self.win
+        win.show()
+        sizes = []
+        for n in (0, 1, 5, 13):
+            win._clear()
+            for i in range(n):
+                p = self.dir / f"t{i}.png"
+                p.write_bytes(self.png.read_bytes())
+                win.files.append(str(p))
+            win._refresh()
+            QApplication.processEvents()
+            self.assertEqual(win.minimumSize(), win.maximumSize())  # fixed: the user cannot drag it
+            sizes.append(win.height())  # (width and exact heights depend on the fonts: offscreen has none)
+        self.assertEqual(sorted(sizes), sizes)  # more files, never a smaller window
+        self.assertEqual(win.list.height(), 228)  # 3 rows of tiles at most, then it scrolls
+        win._clear()
+        QApplication.processEvents()
+        self.assertEqual(win.height(), sizes[0])  # back to the empty size, no leftover gap
+
     def test_empty_select_shows_the_placeholder(self):
         self.assertEqual(self.win.fmt.currentIndex(), -1)
         self.assertEqual(self.win.fmt.placeholderText(), "Add files first")
