@@ -36,6 +36,28 @@ ZERO = {"sample_rate": "Keep", "channels": "Keep", "height": "Keep", "fps": "Kee
 SUPPORTED = ("audio", "video", "image", "doc", "pdf")
 
 
+def _asset(name):
+    """Path (forward slashes, for a stylesheet url) of a bundled image; empty when it is missing."""
+    p = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent)) / "assets" / name
+    return p.as_posix() if p.is_file() else ""
+
+
+class DropBox(QListWidget):
+    """The file list. While it is empty, a hint sits in the middle of it."""
+    def __init__(self, hint_text):
+        super().__init__()
+        self.setObjectName("drop")
+        self.hint = QLabel(hint_text, self)
+        self.hint.setObjectName("hint")
+        self.hint.setAlignment(Qt.AlignCenter)
+        self.hint.setWordWrap(True)
+        self.hint.setAttribute(Qt.WA_TransparentForMouseEvents)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self.hint.setGeometry(16, 8, self.width() - 32, self.height() - 16)
+
+
 def _choice_text(key, c):
     return ZERO.get(key, "Keep") if c == 0 else {2: "Stereo", 1: "Mono"}.get(c, str(c)) if key == "channels" else str(c)
 
@@ -75,16 +97,18 @@ class Window(QWidget):
         root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))  # frozen: bundled data folder
         self.setWindowIcon(QIcon(str(root / "assets" / "logo.png")))
         self.setAcceptDrops(True)
-        self.setMinimumSize(520, 560)
+        self.setMinimumSize(440, 400)
+        self.resize(440, 400)
         self.files, self.worker, self.outs, self.pending = [], None, [], []
         self.save_error = ""
         self.st = settings.load()
         self.opt_widgets = {}
 
-        self.list = QListWidget()
-        self.hint = QLabel("Drop files here, or right-click files in Explorer and choose Convert.")
-        self.hint.setObjectName("muted")
+        self.list = DropBox("Drop files here, or right-click files in Explorer and choose Convert.")
+        self.hint = self.list.hint
         self.fmt = QComboBox()
+        self.fmt.setObjectName("fmt")
+        self.fmt.setPlaceholderText("Add files first")
         self.fmt.currentIndexChanged.connect(self._build_options)
         self.adv = QGroupBox("Advanced")
         self.adv.setCheckable(True)
@@ -123,14 +147,14 @@ class Window(QWidget):
         row.addWidget(self.stop)
         row.addWidget(self.go)
         lay = QVBoxLayout(self)
-        lay.addWidget(self.hint)
-        lay.addWidget(self.list, 1)
+        lay.addWidget(self.list)
         lay.addWidget(QLabel("Convert to"))
         lay.addWidget(self.fmt)
         lay.addWidget(self.adv)
         lay.addWidget(self.trash)
         lay.addWidget(self.bar)
         lay.addWidget(self.msg)
+        lay.addStretch(1)
         lay.addLayout(row)
         self._refresh()
 
@@ -164,6 +188,7 @@ class Window(QWidget):
         self.list.clear()
         self.list.addItems([Path(f).name for f in self.files])
         self.hint.setVisible(not self.files)
+        self.list.setFixedHeight(min(170, max(110, 12 + 26 * len(self.files))))  # landscape box: 110 px empty, 170 px at most
         self.fmt.blockSignals(True)
         self.fmt.clear()
         if self._missing_ffmpeg():
@@ -178,7 +203,12 @@ class Window(QWidget):
                 self.msg.setText("These files cannot be converted together: pick files of one kind.")
         self.msg.style().unpolish(self.msg)
         self.msg.style().polish(self.msg)
+        if self.fmt.count():
+            self.fmt.setCurrentIndex(0)  # with a placeholder text Qt no longer selects the first item by itself
         self.fmt.blockSignals(False)
+        self.fmt.setProperty("empty", not self.fmt.count())  # grey placeholder while there is nothing to pick
+        self.fmt.style().unpolish(self.fmt)
+        self.fmt.style().polish(self.fmt)
         self.go.setEnabled(bool(self.fmt.count()) and not self.worker)
         self.clear.setEnabled(not self.worker)
         self.open_btn.hide()
@@ -337,7 +367,7 @@ def run(files):
                 return 0
             QThread.msleep(100)
         # it never answered (crashed?): carry on as the first instance
-    app.setStyleSheet(theme.stylesheet())
+    app.setStyleSheet(theme.stylesheet(chevron=_asset("chevron.png")))
     QLocalServer.removeServer(PIPE)  # stale pipe name after a crash
     server = QLocalServer()
     server.setSocketOptions(QLocalServer.UserAccessOption)  # only this Windows user may connect

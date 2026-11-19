@@ -29,7 +29,7 @@ New-Item -ItemType Directory build -Force | Out-Null
 & $py tools\make_version_info.py build\version_info.txt
 if ($LASTEXITCODE) { throw "make_version_info failed" }
 & $py -m PyInstaller --noconfirm --clean --windowed --name Convert --icon assets\convert.ico --version-file build\version_info.txt `
-    --add-data "assets\logo.png;assets" --collect-all pillow_heif --collect-all pillow_avif convert.pyw
+    --add-data "assets\logo.png;assets" --add-data "assets\chevron.png;assets" --collect-all pillow_heif --collect-all pillow_avif convert.pyw
 if ($LASTEXITCODE) { throw "PyInstaller failed" }
 # The frozen exe must convert every family before an installer is made from it.
 & $py -I tools\smoke_frozen.py dist\Convert\Convert.exe

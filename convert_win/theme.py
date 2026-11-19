@@ -3,11 +3,23 @@ PALETTE = {"bg": "#1b1d22", "panel": "#252830", "border": "#343844", "text": "#e
            "accent": "#4c8dff", "accent_text": "#ffffff", "error": "#ff6b6b", "ok": "#4cd08a"}
 
 
-def stylesheet(p=PALETTE):
+def stylesheet(p=PALETTE, chevron=""):
+    """`chevron`: path of the select's arrow image (forward slashes); empty keeps Qt's own arrow."""
+    arrow = f"image: url({chevron}); width: 10px; height: 10px;" if chevron else ""
     return f"""
     QWidget {{ background: {p['bg']}; color: {p['text']}; font-family: 'Segoe UI'; font-size: 13px; }}
     QListWidget, QComboBox, QSpinBox, QGroupBox {{ background: {p['panel']}; border: 1px solid {p['border']};
         border-radius: 6px; padding: 4px; }}
+    QListWidget#drop {{ border: 1px dashed {p['border']}; }}
+    QLabel#hint {{ background: transparent; color: {p['muted']}; }}
+    QComboBox#fmt {{ border-radius: 8px; padding: 0 12px; min-height: 34px; }}
+    QComboBox#fmt:hover, QComboBox#fmt:on {{ border-color: {p['accent']}; }}
+    QComboBox#fmt[empty="true"] {{ color: {p['muted']}; }}
+    QComboBox#fmt::drop-down {{ border: none; width: 28px; subcontrol-origin: padding; subcontrol-position: center right; }}
+    QComboBox#fmt::down-arrow {{ {arrow} }}
+    QComboBox#fmt QAbstractItemView {{ background: {p['panel']}; border: 1px solid {p['border']}; border-radius: 8px;
+        outline: 0; padding: 2px; selection-background-color: {p['accent']}; selection-color: {p['accent_text']}; }}
+    QComboBox#fmt QAbstractItemView::item {{ min-height: 32px; padding-left: 8px; }}
     QGroupBox {{ margin-top: 10px; padding-top: 12px; }}
     QGroupBox::title {{ subcontrol-origin: margin; left: 10px; color: {p['muted']}; }}
     QPushButton {{ background: {p['panel']}; border: 1px solid {p['border']}; border-radius: 6px; padding: 7px 16px; }}

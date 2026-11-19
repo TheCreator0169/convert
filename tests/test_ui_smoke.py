@@ -35,7 +35,13 @@ class UiSmoke(unittest.TestCase):
         self.win.add_files([self.png])
         self.assertGreater(self.win.fmt.count(), 0)
         self.assertTrue(self.win.go.isEnabled())
+        self.assertIsNotNone(self.win.fmt.currentData())  # a format is selected, not the "Add files first" placeholder
+        self.assertEqual(self.win.fmt.currentIndex(), 0)
         self.assertIn("quality", self.win.opt_widgets)
+
+    def test_empty_select_shows_the_placeholder(self):
+        self.assertEqual(self.win.fmt.currentIndex(), -1)
+        self.assertEqual(self.win.fmt.placeholderText(), "Add files first")
 
     def test_non_files_and_unsupported_ignored(self):
         exe = self.dir / "x.exe"
