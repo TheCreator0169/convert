@@ -125,7 +125,7 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 
 ## v0.1.11 (2026-11-19, not tagged, not published)
 
-- Commits `f76673e` (smaller window, landscape drop box, restyled select) and `2c6202a` (tiles, automatic height, version). Built with `build.ps1 v0.1.11`.
+- Commits `f76673e` (smaller window, landscape drop box, restyled select), `2c6202a` (tiles, automatic height, version) and `780d553` (Advanced: labels without a dark box, selects and number fields styled like Convert to). Rebuilt after the last one: the first v0.1.11 hashes are gone, that build was never published. Built with `build.ps1 v0.1.11`.
 - Convert.exe sha256 `2658036008e2f0bb2ddcebb82f27efc5a075315aa02707d64e6ba042fd972bc8`.
 - Convert-Setup-v0.1.11.exe sha256 `278284e8bed9f1c7daa056add19f2661134a70765f2c5b6713e77182551ca79e`.
 - Window: 440 px wide, height follows the content and cannot be dragged (no maximize button); files shown as wrapping tiles (type badge and name, 4 per row, the box grows to 3 rows then scrolls); hint centred in the box; restyled "Convert to" select with a chevron (`assets/chevron.png`, bundled), placeholder "Add files first". Fixed on the way: with a placeholder Qt no longer selects the first format by itself.
