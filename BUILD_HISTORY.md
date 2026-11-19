@@ -175,3 +175,13 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 - Made by Haiku 5.5 agents (builders, tester, reviewer, security-auditor, windows-builder); the reviewer and auditor findings were re-checked and fixed before the commit. Decision D8 (refuse UNC) applied on the assistant's advice.
 - Tests in source mode: 217, 1 skipped, all pass (35 new in `test_hardening_v0115.py`; the new tests fail without their fix, except two guards). Frozen smoke test: 10 of 10 checks.
 - Not verified: install, upgrade and uninstall with this setup (RemoveMenuVerbs not run), the Explorer menu, real network shares, the sizes of `dist\` files read by the orchestrator (hashes taken from build.ps1 and `SHA256SUMS`).
+
+## v0.1.16 (2026-11-19)
+
+- Commits `3d59c24` and `841bcee`, then the history. Built with `build.ps1 v0.1.16` (the first build of this version, with an Add files button, was never published; the user asked to drop the button and make the drop box the control).
+- Convert.exe sha256 `55eac947126cacb028fad4c85dfd0234520e471b73449f0bfab046632c84483c`.
+- Convert-Setup-v0.1.16.exe sha256 `f56d37d8db97f8fd2da3c9d94f6c04db360ef57e17217dfccd590de49aaa6ac4`.
+- New in the window: a click on empty space in the drop box opens the file picker (pointing-hand cursor, tooltip "Click to add files (Ctrl+O)", Ctrl+O too); a x on each tile and the Delete key remove one file (blocked while a batch runs); the drop box gets a 2 px dashed accent border during a drag; skipped files are named in a muted message ("Skipped (not a supported file type): ..."); Enter converts, Esc cancels a running batch; the last format is remembered per file type (`last_format` in `settings.json`, validated on load).
+- Made by Haiku 5.5 agents (builder, tester, reviewer, windows-builder); reviewer findings re-checked and fixed (Delete removes only the selected tile, double click on the x, stale hover).
+- Tests in source mode, real platform (not offscreen, which has no fonts and empties the PDFs): 276, 1 skipped, all pass (59 in `test_v0116.py`; 19 mutations caught). Frozen smoke test: 10 of 10 checks and one real `--cli mp3` conversion.
+- Not verified: a real mouse and a real drag from Explorer, the cursor shape on screen, the Windows folder the picker opens in, install/upgrade/uninstall with this setup, the PyInstaller warnings file (access to `build\` denied to the agent), the Explorer menu.
