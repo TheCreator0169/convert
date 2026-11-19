@@ -185,3 +185,14 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 - Made by Haiku 5.5 agents (builder, tester, reviewer, windows-builder); reviewer findings re-checked and fixed (Delete removes only the selected tile, double click on the x, stale hover).
 - Tests in source mode, real platform (not offscreen, which has no fonts and empties the PDFs): 276, 1 skipped, all pass (59 in `test_v0116.py`; 19 mutations caught). Frozen smoke test: 10 of 10 checks and one real `--cli mp3` conversion.
 - Not verified: a real mouse and a real drag from Explorer, the cursor shape on screen, the Windows folder the picker opens in, install/upgrade/uninstall with this setup, the PyInstaller warnings file (access to `build\` denied to the agent), the Explorer menu.
+
+## v0.1.17 (2026-11-19)
+
+- Commit `0353d48`, then the history. Built with `build.ps1 v0.1.17`.
+- Convert.exe sha256 `65be3a96317d14562607e523c3c1ca33b8e69e3b5bccd2b5da1edb6741c6b682`.
+- Convert-Setup-v0.1.17.exe sha256 `29594286cd358d37bc088eac7d3c027a6d54e41d23d9bcdf9bc1c8869178c903`.
+- New in the window: each tile shows Waiting / Working / Done / Failed (9 px word in the free strip; failed: 1 px red edge and the message in the tooltip); errors are tied to the file index, not its name; accessible names and descriptions, label buddies (no mnemonics), tab order; the update notice is reachable with Tab and opens the release page with Enter, Return or Space (1 px accent outline on keyboard focus only); Open folder opens a menu of full paths when the files went to 2-8 folders (first 8 and a count beyond), one folder opens directly, a folder that is gone or remote is not opened.
+- Fixed after the review: Clear is blocked during a run; Enter on a focused button other than Convert no longer starts Convert; a click on the notice no longer draws the focus outline; a stale tile index is ignored.
+- Made by Haiku 5.5 agents (ui-designer, two builders, tester, reviewer, windows-builder).
+- Tests in source mode, real platform: 343, 1 skipped, all pass (67 new in `test_v0117.py`; 27 of 28 mutations caught, the survivor is equivalent). Frozen smoke test: 10 of 10 checks and one real `--cli mp3` conversion.
+- Not verified: how the state words, the focus outline and the folder menu look on screen, a real screen reader (names are set and tested in code only), install/upgrade/uninstall with this setup, the PyInstaller warnings file (access to `build\` denied to the agent), the Explorer menu.
