@@ -104,3 +104,13 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 - Tests in source mode: 164, 1 skipped (the link test needs a link privilege), all pass, ffmpeg on the PATH. CI on `windows-latest` was green at `b202d67` (164 tests, the link test ran there).
 - Frozen smoke test (inside the build, and rerun by hand): image to WebP, txt to PDF, md to DOCX, DOCX to PDF, PDF to PNG and TXT, MP4 to MP3, MKV and GIF all exit 0; runtime log frozen and free of errors; no Convert process left.
 - Not verified: the link fix in the frozen exe (no link privilege here), the window, install, right-click and uninstall with this installer, hardware encoders, SmartScreen (not signed).
+
+## v0.1.9 (2026-11-19, not tagged, not published)
+
+- Commit `97bfe35` (installer and version), then the history. Built with `build.ps1 v0.1.9`.
+- Convert.exe sha256 `6106b2014674af3183268165f9805a331d052bfed14be8219188c41caaa35b59`.
+- Convert-Setup-v0.1.9.exe sha256 `760b1ef29269bfdf7fd09ccb7be5b9d53d91454dfb7ec570829a17f740651756`.
+- Installer: license page (MIT), optional desktop shortcut (unchecked), English and French, `InstallDelete` of `{app}\_internal` on upgrade. No code change in the app.
+- Real install round trip in the user's terminal (real HKCU), silent: v0.1.7 installed, then v0.1.8 over it, then v0.1.9 over that (a planted stale file in `_internal` was removed, right-click verb kept, no desktop shortcut), uninstall (entry, verb and app folder gone; the French "delete settings?" question appeared, user answered No), reinstall v0.1.9.
+- Frozen smoke test inside the build passed. Source tests: 164 passed on v0.1.8 (app code unchanged since).
+- Not verified: the installer pages in the window (license, language, shortcut box: user's eyes), the settings kept after uninstall, hardware encoders, SmartScreen (not signed). `/SUPPRESSMSGBOXES` does not hide the settings question.
