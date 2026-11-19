@@ -164,6 +164,9 @@ class Window(QWidget):
         self.adv.setCheckable(True)
         self.adv.setChecked(False)
         self.form = QFormLayout()
+        self.form.setVerticalSpacing(10)
+        self.form.setLabelAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.adv.setLayout(self.form)
         self.adv.toggled.connect(lambda on: [self.form.itemAt(i).widget().setVisible(on)
                                              for i in range(self.form.count()) if self.form.itemAt(i).widget()])
@@ -423,7 +426,7 @@ def run(files):
                 return 0
             QThread.msleep(100)
         # it never answered (crashed?): carry on as the first instance
-    app.setStyleSheet(theme.stylesheet(chevron=_asset("chevron.png")))
+    app.setStyleSheet(theme.stylesheet(chevron=_asset("chevron.png"), chevron_up=_asset("chevron-up.png")))
     QLocalServer.removeServer(PIPE)  # stale pipe name after a crash
     server = QLocalServer()
     server.setSocketOptions(QLocalServer.UserAccessOption)  # only this Windows user may connect

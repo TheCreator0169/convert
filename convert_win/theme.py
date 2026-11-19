@@ -3,9 +3,10 @@ PALETTE = {"bg": "#1b1d22", "panel": "#252830", "border": "#343844", "text": "#e
            "tile": "#2f3340", "accent": "#4c8dff", "accent_text": "#ffffff", "error": "#ff6b6b", "ok": "#4cd08a"}
 
 
-def stylesheet(p=PALETTE, chevron=""):
-    """`chevron`: path of the select's arrow image (forward slashes); empty keeps Qt's own arrow."""
+def stylesheet(p=PALETTE, chevron="", chevron_up=""):
+    """`chevron`, `chevron_up`: paths (forward slashes) of the select and spin-box arrow images; empty keeps Qt's own arrows."""
     arrow = f"image: url({chevron}); width: 10px; height: 10px;" if chevron else ""
+    arrow_up = f"image: url({chevron_up}); width: 10px; height: 10px;" if chevron_up else ""
     return f"""
     QWidget {{ background: {p['bg']}; color: {p['text']}; font-family: 'Segoe UI'; font-size: 13px; }}
     QListWidget, QComboBox, QSpinBox, QGroupBox {{ background: {p['panel']}; border: 1px solid {p['border']};
@@ -16,14 +17,19 @@ def stylesheet(p=PALETTE, chevron=""):
     QListWidget#drop QScrollBar::add-line:vertical, QListWidget#drop QScrollBar::sub-line:vertical {{ height: 0; }}
     QListWidget#drop QScrollBar::add-page:vertical, QListWidget#drop QScrollBar::sub-page:vertical {{ background: transparent; }}
     QLabel#hint {{ background: transparent; color: {p['muted']}; }}
-    QComboBox#fmt {{ border-radius: 8px; padding: 0 12px; min-height: 34px; }}
-    QComboBox#fmt:hover, QComboBox#fmt:on {{ border-color: {p['accent']}; }}
-    QComboBox#fmt[empty="true"] {{ color: {p['muted']}; }}
-    QComboBox#fmt::drop-down {{ border: none; width: 28px; subcontrol-origin: padding; subcontrol-position: center right; }}
-    QComboBox#fmt::down-arrow {{ {arrow} }}
-    QComboBox#fmt QAbstractItemView {{ background: {p['panel']}; border: 1px solid {p['border']}; border-radius: 8px;
+    QComboBox, QSpinBox {{ border-radius: 8px; padding: 0 12px; min-height: 34px; }}
+    QComboBox:hover, QComboBox:on, QSpinBox:hover, QSpinBox:focus {{ border-color: {p['accent']}; }}
+    QComboBox[empty="true"] {{ color: {p['muted']}; }}
+    QComboBox::drop-down {{ border: none; width: 28px; subcontrol-origin: padding; subcontrol-position: center right; }}
+    QComboBox::down-arrow {{ {arrow} }}
+    QComboBox QAbstractItemView {{ background: {p['panel']}; border: 1px solid {p['border']}; border-radius: 8px;
         outline: 0; padding: 2px; selection-background-color: {p['accent']}; selection-color: {p['accent_text']}; }}
-    QComboBox#fmt QAbstractItemView::item {{ min-height: 32px; padding-left: 8px; }}
+    QComboBox QAbstractItemView::item {{ min-height: 32px; padding-left: 8px; }}
+    QSpinBox::up-button, QSpinBox::down-button {{ background: transparent; border: none; width: 22px; }}
+    QSpinBox::up-arrow {{ {arrow_up} }}
+    QSpinBox::down-arrow {{ {arrow} }}
+    QGroupBox QComboBox, QGroupBox QSpinBox {{ background: {p['bg']}; }}
+    QGroupBox QLabel, QGroupBox QCheckBox {{ background: transparent; }}
     QGroupBox {{ margin-top: 10px; padding-top: 12px; }}
     QGroupBox::title {{ subcontrol-origin: margin; left: 10px; color: {p['muted']}; }}
     QPushButton {{ background: {p['panel']}; border: 1px solid {p['border']}; border-radius: 6px; padding: 7px 16px; }}
