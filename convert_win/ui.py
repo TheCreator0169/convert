@@ -155,7 +155,7 @@ class Worker(QThread):
 class Window(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(f"Convert {CONVERT_VERSION}")
+        self.setWindowTitle("Convert")  # the version is shown once, at the bottom of the window
         root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))  # frozen: bundled data folder
         self.setWindowIcon(QIcon(str(root / "assets" / "logo.png")))
         self.setAcceptDrops(True)

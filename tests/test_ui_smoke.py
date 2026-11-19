@@ -76,6 +76,9 @@ class UiSmoke(unittest.TestCase):
         win.open_btn.hide()
         self.assertTrue(win.version.isVisible())
 
+    def test_title_has_no_version(self):
+        self.assertEqual(self.win.windowTitle(), "Convert")
+
     def test_empty_select_shows_the_placeholder(self):
         self.assertEqual(self.win.fmt.currentIndex(), -1)
         self.assertEqual(self.win.fmt.placeholderText(), "Add files first")
