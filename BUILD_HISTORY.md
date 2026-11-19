@@ -207,3 +207,15 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 - Tests in source mode: 344, 1 skipped, all pass. Frozen smoke test: all checks; direct `--cli mp3` conversion exit code 0.
 - Install test on the user's PC (real HKCU, user's terminal, `.claude\test-installer-v0.1.18.ps1`): (1) install with pages over 0.1.14, exit 0, menu, shortcuts and settings kept; (2) setup with pages while Convert runs, exit 0, the user reported it perfect; (3) silent upgrade with Convert running, exit 0, no hang, Convert closed; (4) uninstall with pages, answer No to the settings question: exit 0, entry, exe, menu key and shortcuts removed, settings kept; silent reinstall exit 0, everything back. Settings differ from the backup only by the new `last_format` key.
 - Not verified by the assistant: the text and size of each page, the French pages and the language of the running-Convert message (the user looked, said it was perfect; details not reported), `/VERYSILENT` uninstall, the Explorer menu after install, Windows 11 "Show more options".
+
+## v0.2.0 (2026-11-20)
+
+- Commit `ae717bb`, then the history. Built with `build.ps1 v0.2.0`.
+- Convert.exe sha256 `a97bd3ae6b6a1c01a9fac50429c3a7046a9ec1958b9498b4c0afdc0627441312`.
+- Convert-Setup-v0.2.0.exe sha256 `b4b6826d4dd304cadcfd512beffd2fc1e5e5fcb9172ee30e05d35bab8b951c36`.
+- New: a HEIC with several images converted to a single-image format gives one file per image (`name_1.jpg`, `name_2.jpg`, ...). Each image uses its own EXIF; ICC kept; images over 178 million pixels are skipped with a warning (the original is then kept); limits 500 images and 400 million pixels in total; cancel removes the files already written; AVIF is not split.
+- Fixed after the review: the EXIF of the first image could leak onto later images that have none (reproduced, test added; it fails on the old code).
+- Made by Haiku 5.5 agents (builder, tester, reviewer, windows-builder).
+- Tests in source mode: 363, 1 skipped, all pass (20 new in `test_v020.py`). Frozen smoke test: all checks passed.
+- Install test on the user's PC (real HKCU, `.claude\test-installer-v0.2.0.ps1`): silent upgrade 0.1.18 to 0.2.0 exit 0, exe 0.2.0, uninstall entry 0.2.0, menu key present; the installed exe converted a synthetic 3-image HEIC into 3 jpg, exit 0.
+- Not verified: a real iPhone HEIC; `still_count` seeks every frame (cost on large files); aggregate caps also apply to stills (a 3-image file of 150 million pixels each is refused); ICC and `_save_kw` have no dedicated test; an empty reserved file can remain if the process is killed; the Explorer menu; Windows 11 "Show more options".
