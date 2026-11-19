@@ -126,8 +126,8 @@ Contents: cancel stops image jobs between frames and document jobs between pages
 ## v0.1.11 (2026-11-19, not tagged, not published)
 
 - Commits `f76673e` (smaller window, landscape drop box, restyled select) and `2c6202a` (tiles, automatic height, version). Built with `build.ps1 v0.1.11`.
-- Convert.exe sha256 `18b1bac1f2d538cde52df80e55fd79e0303e20b883617e06ae6cb08eeb491131`.
-- Convert-Setup-v0.1.11.exe sha256 `b75c1181102926beea69e8b3ec8fa597cd1ad81176869e1a031d93b99bee3a73`.
+- Convert.exe sha256 `2658036008e2f0bb2ddcebb82f27efc5a075315aa02707d64e6ba042fd972bc8`.
+- Convert-Setup-v0.1.11.exe sha256 `278284e8bed9f1c7daa056add19f2661134a70765f2c5b6713e77182551ca79e`.
 - Window: 440 px wide, height follows the content and cannot be dragged (no maximize button); files shown as wrapping tiles (type badge and name, 4 per row, the box grows to 3 rows then scrolls); hint centred in the box; restyled "Convert to" select with a chevron (`assets/chevron.png`, bundled), placeholder "Add files first". Fixed on the way: with a placeholder Qt no longer selects the first format by itself.
 - Tests in source mode: 166, 1 skipped, all pass. Frozen smoke test inside the build passed; `chevron.png` is in the frozen bundle.
 - Measured by grabbing the real window (native platform, 440 px): empty 314 px high, 1 file 406, 5 files 454, 13 files 524, with Advanced open 556.
