@@ -52,6 +52,9 @@ def convert_file(src, fmt_id, options, trash_original=False, cancel=None, notes=
     warn = None
     if kind == "pdf":
         outs, warn = pdf_conv.convert(src, fmt, opts, cancel)
+    elif kind == "image" and image_conv.still_count(src, fmt) > 1:  # multi-image HEIC: name_1, name_2, ...
+        outs, warn = image_conv.convert_stills(src, fmt, opts, cancel,
+                                               lambda i: unique_path(src, fmt.ext, f"_{i}"))
     else:
         dst = unique_path(src, fmt.ext)
         try:

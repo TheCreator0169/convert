@@ -42,7 +42,7 @@ Agent: windows-builder, security-auditor on convert.iss. Needs the user for the 
 - Light theme + system choice (U6, D5). ui-designer. M.
 - Windows 11 top-level menu via sparse MSIX: needs signing (I7), so decide signing first. L.
 - QSV / AMF encoders: no hardware here; ask the user to test on a PC that has it. S.
-- Legacy .doc input; HEIC multi-frame. L / S.
+- Legacy .doc input. L / S. (HEIC multi-frame: done in v0.2.0.)
 
 ## Doc fixes (any time, no version)
 ROADMAP.md D2 says update check is off and not built (it is on, built); known-issues: "GIF first frame only" and

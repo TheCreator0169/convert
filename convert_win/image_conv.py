@@ -45,6 +45,85 @@ def _prep(im, fmt, opts):
     return im
 
 
+def still_count(src, fmt):
+    """Images in a multi-image HEIC for a single-image target (one output each); 1 for everything else.
+    Header only, before anything is written. Refused above MAX_FRAMES or the total pixel budget."""
+    if fmt.id in MULTI:
+        return 1
+    try:
+        im = Image.open(src)
+    except Image.DecompressionBombError as e:
+        raise RuntimeError(f"image too large (limit {MAX_IMAGE_PIXELS // 1_000_000} million pixels)") from e
+    with im:
+        n = getattr(im, "n_frames", 1)
+        if im.format != "HEIF" or n < 2:  # AVIF and GIF/WebP/TIFF keep the first-frame behaviour
+            return 1
+        if n > MAX_FRAMES:
+            raise RuntimeError(f"too many images in this HEIC: {n} (limit {MAX_FRAMES})")
+        pixels = 0
+        for i in range(n):
+            im.seek(i)
+            pixels += im.width * im.height
+        if pixels > MAX_FRAME_PIXELS:
+            raise RuntimeError(f"too many pixels in this HEIC: over {MAX_FRAME_PIXELS // 1_000_000} million in all")
+    return n
+
+
+def _save_kw(fmt, opts, exif, icc):
+    """Quality, EXIF (orientation removed: the pixels are upright) and colour profile for one saved file."""
+    kw = {"quality": opts["quality"]} if fmt.id in ("jpg", "heic", "avif", "webp", "pdf") else {}
+    if ORIENTATION in exif:
+        del exif[ORIENTATION]
+    if fmt.id in META:
+        if len(exif):
+            kw["exif"] = exif
+        if icc:
+            kw["icc_profile"] = icc
+    return kw
+
+
+def convert_stills(src, fmt, opts, cancel, new_path):
+    """One file per image of a multi-image HEIC. new_path(i) reserves and returns the file for image i (1-based), so
+    numbering follows the file order. An image over MAX_IMAGE_PIXELS is skipped and named in the warning. Any failure
+    or cancel removes every file written. Returns (paths, warning or None)."""
+    written, skipped = [], []
+    try:
+        with Image.open(src) as im:
+            total = im.n_frames
+            for i in range(total):
+                if cancel is not None and cancel.is_set():
+                    raise Cancelled()
+                im.seek(i)
+                if im.width * im.height > MAX_IMAGE_PIXELS:
+                    skipped.append(str(i + 1))
+                    continue
+                icc = im.info.get("icc_profile") if im.mode in ("RGB", "RGBA", "L", "LA", "P") else None
+                exif = Image.Exif()  # a fresh one per image: getexif() would keep the tags of an earlier image when this one has none
+                if im.info.get("exif"):
+                    exif.load(im.info["exif"])
+                frame = _prep(ImageOps.exif_transpose(im), fmt, opts)
+                kw = _save_kw(fmt, opts, exif, icc)
+                if cancel is not None and cancel.is_set():
+                    raise Cancelled()
+                dst = new_path(i + 1)
+                written.append(dst)
+                frame.save(dst, PIL_NAME[fmt.id], **kw)
+                if not dst.exists() or dst.stat().st_size == 0:
+                    raise RuntimeError("converter wrote no output")
+    except BaseException:
+        for p in written:
+            p.unlink(missing_ok=True)
+        raise
+    if not written:
+        raise RuntimeError(f"no image could be converted: all {total} over the limit "
+                           f"({MAX_IMAGE_PIXELS // 1_000_000} million pixels)")
+    warn = None
+    if skipped:
+        warn = (f"images {', '.join(skipped)} of {total} skipped: over "
+                f"{MAX_IMAGE_PIXELS // 1_000_000} million pixels")
+    return written, warn
+
+
 def convert(src, dst, fmt, opts, cancel=None):
     """Returns a warning string when the output is not the whole input, else None. Cancel is checked between frames."""
     with _open(src) as im:
@@ -69,14 +148,7 @@ def convert(src, dst, fmt, opts, cancel=None):
             durations.append(im.info.get("duration", 100))
             frames.append(_prep(ImageOps.exif_transpose(im), fmt, opts))
         loop = im.info.get("loop", 0)
-    if ORIENTATION in exif:
-        del exif[ORIENTATION]  # the pixels are already upright
-    kw = {"quality": opts["quality"]} if fmt.id in ("jpg", "heic", "avif", "webp", "pdf") else {}
-    if fmt.id in META:
-        if len(exif):
-            kw["exif"] = exif
-        if icc:
-            kw["icc_profile"] = icc
+    kw = _save_kw(fmt, opts, exif, icc)
     if len(frames) > 1:
         kw.update(save_all=True, append_images=frames[1:])
         if fmt.id in ("gif", "webp"):

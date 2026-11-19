@@ -8,7 +8,7 @@ One entry per gotcha: symptom, cause, fix or status.
 - **Inno Setup cannot write the setup exe into `dist\`** ("file in use"); `build.ps1` builds in `%TEMP%` then copies. Cause not found (Desktop sync or virus scan suspected).
 - **Windows 11 short context menu.** A registry verb appears under "Show more options" only. Top-level needs a sparse MSIX with `IExplorerCommand`. Not planned yet.
 - **Legacy `.doc` input** needs LibreOffice; not supported in v0.1.0.
-- **Animated GIF and multi-image HEIC** keep only the first frame (same limit as the macOS original).
+- **Multi-image HEIC** (since v0.2.0): a HEIC with several images converted to a single-image format gives one file per image (`name_1.jpg`, ...). Tested on synthetic files only, not on real iPhone files. The size limits count all images together (a 3-image file of 150 million pixels each is refused); each image is decoded once more to read its size. Animated GIF: all frames are kept when the target holds frames (gif, webp, tiff).
 - **Markdown** covers common syntax only: no footnotes, embedded HTML or images.
 
 
