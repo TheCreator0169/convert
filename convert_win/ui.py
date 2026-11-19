@@ -206,12 +206,12 @@ class TileDelegate(QStyledItemDelegate):
         p.setFont(font)
         p.setPen(QColor(pal["text"]))
         name = QFontMetrics(font).elidedText(index.data(Qt.DisplayRole), Qt.ElideMiddle, r.width() - 16)
-        p.drawText(QRect(r.left() + 8, r.top() + 32, r.width() - 16, 22), Qt.AlignLeft | Qt.AlignVCenter, name)
+        p.drawText(QRect(r.left() + 8, r.top() + 26, r.width() - 16, 16), Qt.AlignLeft | Qt.AlignVCenter, name)  # the tile body is 58 px high: badge 8-24, name 26-42, state 42-54
         label, colour = STATE_TEXT.get(state, STATE_TEXT["waiting"])
         font.setPixelSize(9)
         p.setFont(font)
         p.setPen(QColor(pal[colour]))
-        p.drawText(QRect(option.rect.left() + 11, option.rect.top() + 57, 72, 10), Qt.AlignLeft | Qt.AlignVCenter, label)
+        p.drawText(QRect(r.left() + 8, r.top() + 42, r.width() - 16, 12), Qt.AlignLeft | Qt.AlignVCenter, label)
         p.restore()
 
 

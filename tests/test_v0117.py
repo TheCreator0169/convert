@@ -711,5 +711,29 @@ class ReviewFixes(Harness, unittest.TestCase):
         self.assertIn("no longer exists", self.win.msg.text())
 
 
+    def test_the_state_word_is_painted_inside_the_tile_body(self):
+        """The tile body is the 88x64 item rect inset by 3 px: its bottom edge is row 61. The word must sit above it."""
+        from PySide6.QtCore import QRect
+        from PySide6.QtGui import QImage, QPainter
+        from PySide6.QtWidgets import QStyleOptionViewItem
+        item = self.win.list.item(0)
+        item.setData(ui.STATE_ROLE, "waiting")
+        img = QImage(88, 64, QImage.Format_RGB32)
+        img.fill(QColor("#ff00ff"))  # a colour nothing else uses
+        opt = QStyleOptionViewItem()
+        opt.rect = QRect(0, 0, 88, 64)
+        opt.font = self.win.font()
+        p = QPainter(img)
+        ui.TileDelegate(self.win.list).paint(p, opt, self.win.list.indexFromItem(item))
+        p.end()
+        body = QColor(theme.PALETTE["tile"]).rgb()
+        magenta = QColor("#ff00ff").rgb()
+        outside = [img.pixel(x, y) for y in range(61, 64) for x in range(88)] + [img.pixel(x, y) for y in range(0, 64) for x in (0, 1, 2)]
+        self.assertTrue(all(c == magenta for c in outside), "something is painted outside the tile body")
+        word_rows = {y for y in range(45, 57) for x in range(8, 80) if img.pixel(x, y) not in (body, magenta)}
+        self.assertTrue(word_rows, "no state word inside the body, below the name")
+        self.assertLess(max(word_rows), 58)
+
+
 if __name__ == "__main__":
     unittest.main()
