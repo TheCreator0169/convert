@@ -59,6 +59,23 @@ class UiSmoke(unittest.TestCase):
         QApplication.processEvents()
         self.assertEqual(win.height(), sizes[0])  # back to the empty size, no leftover gap
 
+    def test_bottom_row_message_takes_no_room_and_version_hides_with_result_buttons(self):
+        win = self.win
+        win.show()
+        QApplication.processEvents()
+        self.assertFalse(win.msg.isVisible())  # no gap under the progress bar while there is no message
+        win.msg.setText("something")
+        self.assertTrue(win.msg.isVisible())
+        win.msg.setText("")
+        self.assertFalse(win.msg.isVisible())
+        self.assertEqual((win.clear.width(), win.clear.height()), (win.go.width(), win.go.height()))
+        self.assertTrue(win.version.isVisible())
+        self.assertEqual(win.version.text(), f"v{ui.CONVERT_VERSION}")
+        win.open_btn.show()  # beside the version there is no room for the result buttons
+        self.assertFalse(win.version.isVisible())
+        win.open_btn.hide()
+        self.assertTrue(win.version.isVisible())
+
     def test_empty_select_shows_the_placeholder(self):
         self.assertEqual(self.win.fmt.currentIndex(), -1)
         self.assertEqual(self.win.fmt.placeholderText(), "Add files first")

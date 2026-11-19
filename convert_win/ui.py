@@ -8,11 +8,11 @@ import sys
 import threading
 from pathlib import Path
 
-from PySide6.QtCore import QRect, QRectF, QSize, QThread, QTimer, Qt, Signal
+from PySide6.QtCore import QEvent, QRect, QRectF, QSize, QThread, QTimer, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QPen
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QFormLayout, QGroupBox, QHBoxLayout,
-                               QLabel, QLayout, QListView, QListWidget, QListWidgetItem, QProgressBar, QPushButton,
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QFormLayout, QGridLayout, QGroupBox,
+                               QHBoxLayout, QLabel, QLayout, QListView, QListWidget, QListWidgetItem, QProgressBar, QPushButton,
                                QSpinBox, QStyle, QStyledItemDelegate, QVBoxLayout, QWidget)
 
 from . import settings, theme
@@ -35,6 +35,17 @@ LABEL = {"bitrate": "Bitrate (kbps)", "sample_rate": "Sample rate (Hz)", "channe
 ZERO = {"sample_rate": "Keep", "channels": "Keep", "height": "Keep", "fps": "Keep", "max_size": "Keep",
         "bitrate": "", "width": ""}
 SUPPORTED = ("audio", "video", "image", "doc", "pdf")
+
+
+class MessageLabel(QLabel):
+    """Takes no room while it has no text, so there is no gap under the progress bar."""
+    def __init__(self):
+        super().__init__("")
+        self.hide()
+
+    def setText(self, text):
+        super().setText(text)
+        self.setVisible(bool(text))
 
 
 def _asset(name):
@@ -172,7 +183,7 @@ class Window(QWidget):
                                              for i in range(self.form.count()) if self.form.itemAt(i).widget()])
         self.trash = QCheckBox("Move originals to the Recycle Bin after a successful conversion")
         self.trash.setChecked(self.st["trash_originals"])
-        self.msg = QLabel("")
+        self.msg = MessageLabel()
         self.msg.setWordWrap(True)  # one line per failed file, wrapped, and the text can be selected and copied
         self.msg.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.bar = QProgressBar()
@@ -192,13 +203,25 @@ class Window(QWidget):
         self.clear = QPushButton("Clear")
         self.clear.clicked.connect(self._clear)
 
-        row = QHBoxLayout()
-        row.addWidget(self.clear)
-        row.addStretch()
-        row.addWidget(self.logs_btn)
-        row.addWidget(self.open_btn)
-        row.addWidget(self.stop)
-        row.addWidget(self.go)
+        for b in (self.clear, self.go):
+            b.setFixedSize(80, 31)  # both bottom buttons as big as Convert; the text stays centred and keeps its size
+        self.version = QLabel(f"v{CONVERT_VERSION}")
+        self.version.setObjectName("version")
+        self.version.setAlignment(Qt.AlignCenter)
+        right = QHBoxLayout()
+        right.setContentsMargins(0, 0, 0, 0)
+        for b in (self.logs_btn, self.open_btn, self.stop, self.go):
+            right.addWidget(b)
+            b.installEventFilter(self)
+        row = QGridLayout()  # Clear | version, centred in the window | the other buttons; the side columns are equal
+        row.setContentsMargins(0, 2, 0, 0)  # 6 px layout spacing + 2 = 8 px under the progress bar
+        row.addWidget(self.clear, 0, 0, Qt.AlignLeft | Qt.AlignVCenter)
+        row.addWidget(self.version, 0, 1, Qt.AlignCenter)
+        row.addLayout(right, 0, 2, Qt.AlignRight | Qt.AlignVCenter)
+        row.setColumnStretch(0, 1)
+        row.setColumnStretch(2, 1)
+        row.setColumnMinimumWidth(0, 80)
+        row.setColumnMinimumWidth(2, 80)
         lay = QVBoxLayout(self)
         lay.addWidget(self.list)
         lay.addWidget(QLabel("Convert to"))
@@ -211,6 +234,13 @@ class Window(QWidget):
         lay.setContentsMargins(11, 11, 11, 11)
         lay.setSizeConstraint(QLayout.SetFixedSize)  # 440 px wide (the box is 418 px), as high as its content, always
         self._refresh()
+
+    def eventFilter(self, obj, event):
+        # The version is hidden while Cancel / Open folder / Open log folder are shown: they would not fit beside it.
+        if event.type() in (QEvent.ShowToParent, QEvent.HideToParent):
+            extra = (self.logs_btn, self.open_btn, self.stop)
+            self.version.setVisible(not any(not b.isHidden() for b in extra))
+        return False
 
     # --- files -------------------------------------------------------------------------------------------------
     def add_files(self, paths):
