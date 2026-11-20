@@ -179,7 +179,10 @@ def apply_theme(app, setting, win=None):
 
 def _on_scheme_changed(app, win):
     """Windows switched between dark and light. Only "system" follows it; a fixed choice ignores it. Never sets the scheme."""
-    if win.st["theme"] == "system":
+    st = getattr(win, "st", None)  # a window that is not built yet has no settings
+    if st is None:
+        return
+    if st.get("theme") == "system":
         _refresh_palette(app, "system")
         _repaint(win)
 

@@ -1,8 +1,6 @@
 # Convert for Windows: roadmap
 
-Status 2026-11-18: **v0.1.3 is released**; the plan to v0.2.0 is in "Release plan" below. Older status: **v0.1.0 works and is public** (`github.com/TheCreator0169/convert`, MIT). Window, right-click menu,
-installer, audio/video/image/document/PDF conversion, install and uninstall checked on the real PC.
-This file plans what comes next. Nothing below is started.
+Status 2026-11-20: **v0.2.2 is the latest release** (public on `github.com/TheCreator0169/convert`, MIT). This file is the plan as it was written, kept as history: each table says what was built, released or dropped. Release dates are in `docs\progress.md`. The versions did not ship in the order below (v0.1.9 brought the installer pages, the window came in v0.1.11, v0.1.10 was never published); see progress.md for what each release contains.
 
 Goal stays the same: right-click a file, choose Convert, done. 100 % local, no account, no telemetry.
 
@@ -23,13 +21,13 @@ Every version ends the same way: tests first, all suites green, local commit, `b
 
 | Version | Theme | Items | You test |
 |---|---|---|---|
-| v0.1.4 (built, being tested) | Output quality of documents | DOCX writer keeps lists, tables, links, images (today it writes text and bold/italic only); DOCX reader: footnotes, nested list levels, headers/footers; remove the page number Qt prints on PDFs; ODT and RTF read with structure (tables, bold) instead of text only | convert your own .docx / .odt / .rtf to PDF and DOCX and look |
-| v0.1.5 (built, being tested) | Cancel and limits | Cancel interrupts a running image/document/PDF job (known issue); GIF/WebP/TIFF frame cap instead of a memory error; "Open log folder" and a copyable error per file (U3, text only, no restyle) | cancel a big job; convert a long GIF |
+| v0.1.4 (released) | Output quality of documents | DOCX writer keeps lists, tables, links, images (today it writes text and bold/italic only); DOCX reader: footnotes, nested list levels, headers/footers; remove the page number Qt prints on PDFs; ODT and RTF read with structure (tables, bold) instead of text only | convert your own .docx / .odt / .rtf to PDF and DOCX and look |
+| v0.1.5 (released) | Cancel and limits | Cancel interrupts a running image/document/PDF job (known issue); GIF/WebP/TIFF frame cap instead of a memory error; "Open log folder" and a copyable error per file (U3, text only, no restyle) | cancel a big job; convert a long GIF |
 | v0.1.6 (published) | Audio and video | Choose which audio track and keep or drop subtitles (instead of warning only); ffprobe-based info; argument-level tests for every encoder; real conversion for every audio id (WMA, AC3, WavPack, MP2, ALAC 24-bit), HEVC, AV1, ProRes | convert a film with 2 audio tracks; a hardware encoder if your GPU has one |
-| v0.1.7 (coded, not built) | Tests and CI | Coverage list below (120+ tests); GitHub Actions on `windows-latest` (D6); frozen smoke test inside `build.ps1`; H9 hashes (`pip-tools`, a download: your OK) | nothing visible; CI badge green |
-| v0.1.8 | Installer | I1-I9: license page, optional desktop shortcut, French and English, `InstallDelete`, `AppMutex`, ffmpeg hint page (D3), real install / upgrade / uninstall in **your** terminal | install over v0.1.3, right-click, uninstall |
-| v0.1.9 | Window behaviour (no restyle) | U7 remember size, position and last format; U8 keyboard; U9 accessibility; U10 Add files, Reset options; U12 ffmpeg-missing helper | use the window with the keyboard only |
-| v0.2.0 | Window look | U1, U2, U4, U5, U6, U11. Before any code: I list each element with position, size, colour, alignment and wait for your OK | **you look at it** (I cannot judge looks) |
+| v0.1.7 (released; the H9 hashes came in the v0.1.14 build) | Tests and CI | Coverage list below (120+ tests); GitHub Actions on `windows-latest` (D6); frozen smoke test inside `build.ps1`; H9 hashes (`pip-tools`, a download: your OK) | nothing visible; CI badge green |
+| v0.1.8 (released as the unique_path fix; the installer pages came in v0.1.9) | Installer | I1-I9: license page, optional desktop shortcut, French and English, `InstallDelete`, `AppMutex`, ffmpeg hint page (D3), real install / upgrade / uninstall in **your** terminal | install over v0.1.3, right-click, uninstall |
+| v0.1.9 (released: the installer pages; the window came in v0.1.11) | Window behaviour (no restyle) | U7 remember size, position and last format; U8 keyboard; U9 accessibility; U10 Add files, Reset options; U12 ffmpeg-missing helper | use the window with the keyboard only |
+| v0.2.0 (released as the HEIC multi-image change; the window work came in v0.1.11 to v0.1.18 and v0.2.1) | Window look | U1, U2, U4, U5, U6, U11. Before any code: I list each element with position, size, colour, alignment and wait for your OK | **you look at it** (I cannot judge looks) |
 
 ### Added from your feedback (2026-11-18): planned only, nothing built
 
@@ -42,17 +40,17 @@ Every version ends the same way: tests first, all suites green, local commit, `b
 Order stays: your review of the mock before v0.2.0 starts; then you test the new window and tell me what to change.
 
 Order rationale: data quality first (a bad conversion is worse than an ugly window), then safety nets, then installer, then the window, so the window work lands on a tested base.
-Decisions still open (defaults apply): D2 update check = not built, D3 ffmpeg bundling = external, D4 signing = none (README says so), D5 light theme = follow Windows, D6 CI = yes, D7 reflog cleanup = ask first.
+Decisions (status 2026-11-20): D2 update check = answered yes, built in v0.1.13; D3 ffmpeg bundling = external (still the default); D4 signing = none (README says so); D5 light theme = done in v0.2.1 (System, Dark or Light); D6 CI = yes, runs on every push; D7 reflog cleanup = still open, ask first.
 
 ## Decisions needed from the user
 
 | # | Question | Default if no answer |
 |---|---|---|
 | D1 | Publish v0.1.0 as a GitHub Release now, or wait for v0.1.1 (safety fixes)? | Wait for v0.1.1 |
-| D2 | Optional "check for a newer version" (one request to GitHub, off by default, opens the download page, installs nothing)? | Not built; updates stay manual (run the new setup over the old one) |
+| D2 | Optional "check for a newer version" (one request to GitHub, off by default, opens the download page, installs nothing)? | Answered yes (2026-11-19). Built in v0.1.13; on unless `update_check` is `false` in settings.json |
 | D3 | Bundle ffmpeg in the installer (GPL build, +80 MB) or keep it external with a hint? | External |
 | D4 | Code signing (paid certificate) so SmartScreen does not warn? | No signing, README says so |
-| D5 | Light theme and "follow Windows"? | Yes, follow Windows |
+| D5 | Light theme and "follow Windows"? | Done in v0.2.1: a Theme choice, System (follows Windows), Dark or Light |
 | D6 | GitHub Actions CI on every push (needs a token that may push workflow files)? | Yes, if the login allows it |
 | D7 | Delete the old local reflog entries that still hold your personal email (`git reflog expire` + `gc`)? | Ask first |
 
@@ -145,4 +143,4 @@ Agents: scout (list), tester (writes), reviewer. Done when: >= 120 tests, CI gre
 
 ## Not planned unless you ask
 
-Top-level entry in the short Windows 11 menu (needs a signed MSIX package), Excel/PowerPoint, legacy `.doc`, a website, telemetry.
+Top-level entry in the short Windows 11 menu (needs a signed MSIX package; deferred, see progress.md), Excel/PowerPoint, a website, telemetry. Legacy `.doc` input was added in v0.2.2 (text only).

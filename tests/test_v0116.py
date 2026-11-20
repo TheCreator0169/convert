@@ -21,6 +21,7 @@ from convert_win.formats import INPUTS, picker_filter
 
 _tmp = tempfile.TemporaryDirectory()
 app = None
+FAKE_FFMPEG = r"C:\fake\ffmpeg.exe"  # never run: find_tool is mocked where a test needs ffmpeg listed
 NO_FFMPEG_MSG = "ffmpeg not found. Install it (winget install Gyan.FFmpeg) and restart Convert."
 MIXED_MSG = "These files cannot be converted together: pick files of one kind."
 
@@ -487,6 +488,12 @@ class Shortcuts(WindowCase):
 
 
 class LastFormat(WindowCase):
+    def setUp(self):
+        super().setUp()
+        # audio and video need ffmpeg to be offered: a fake path keeps the list (no ffmpeg runs, Worker is mocked)
+        ff = mock.patch.object(ui, "find_tool", return_value=FAKE_FFMPEG)
+        ff.start()
+        self.addCleanup(ff.stop)
     def convert_with(self, paths, fid):
         """Select `paths`, pick `fid`, press Convert with the worker mocked (no real conversion)."""
         self.win._clear()

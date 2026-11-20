@@ -206,10 +206,12 @@ class UiSmoke(unittest.TestCase):
     def test_video_file_offers_mp3_with_audio_options(self):
         mp4 = self.dir / "a.mp4"
         mp4.touch()
-        self.win.add_files([mp4])
-        ids = [self.win.fmt.itemData(i) for i in range(self.win.fmt.count())]
-        self.assertEqual(ids[0], "mp4")
-        self.win.fmt.setCurrentIndex(ids.index("mp3"))
+        # ffmpeg must count as present for video formats to be offered; a fake path, nothing is run (no ffmpeg in CI)
+        with mock.patch.object(ui, "find_tool", return_value=r"C:\fake\ffmpeg.exe"):
+            self.win.add_files([mp4])
+            ids = [self.win.fmt.itemData(i) for i in range(self.win.fmt.count())]
+            self.assertEqual(ids[0], "mp4")
+            self.win.fmt.setCurrentIndex(ids.index("mp3"))
         self.assertIn("bitrate", self.win.opt_widgets)
         self.assertIn("audio_track", self.win.opt_widgets)
 

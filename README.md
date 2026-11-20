@@ -11,13 +11,15 @@ no account, no analytics. Once a day Convert asks GitHub whether a newer version
 
 The result goes **next to the original** and nothing is overwritten. Convert many files at once, or drag them onto the window.
 
-| Input | Output |
+| Input type | Output formats |
 |---|---|
 | 🎵 Audio | MP3, M4A, WAV, AIFF, FLAC, ALAC, Opus, OGG, WMA, AC3, WavPack, MP2 |
 | 🎬 Video | MP4 (H.264, HEVC, AV1), MOV, WebM, MKV, GIF, or any audio format |
 | 🖼️ Images | JPEG, PNG, HEIC, AVIF, WebP, TIFF, GIF, BMP, PDF |
 | 📄 Documents | PDF, DOCX, ODT, RTF, TXT, HTML (from TXT, MD, HTML, RTF, DOC, DOCX, ODT) |
 | 📕 PDF | PNG or JPEG (one per page), TXT |
+
+A HEIC with several images, converted to a single-image format, gives one file per image (`name_1.jpg`, `name_2.jpg`, ...).
 
 ## Install
 
@@ -31,13 +33,17 @@ The result goes **next to the original** and nothing is overwritten. Convert man
 
 Untested on other machines: keep your originals until you trust it.
 
+## Window
+
+Theme: right-click the version label at the bottom of the window and choose System, Dark or Light. With the keyboard, Tab to the label and press the Menu key.
+
 ## Uninstall
 
 Windows Settings, Apps, Convert. It removes the program and the menu entry, and asks whether to keep your settings.
 
 ## Known limits
 
-- Legacy `.doc` (Word 97-2003) inputs keep the text only: no formatting, pictures, headers, footnotes or text boxes (headers, footnotes and text boxes are not read at all); tables become tab-separated lines, and an empty cell in the middle of a row is lost. Password-protected files are refused. A `.doc` name on HTML, WordML or plain text is refused ("not a Word document"); RTF, DOCX and ODT content under a `.doc` name is read as that format. Only files made by Word 365 were tested. RTF and ODT inputs keep the text only too.
+- Legacy `.doc` (Word 97-2003) inputs keep the text only: no formatting, pictures, headers, footnotes or text boxes (headers, footnotes and text boxes are not read at all); tables become tab-separated lines, and an empty cell in the middle of a row is lost. Password-protected files are refused. A `.doc` name on HTML, WordML or plain text is refused ("not a Word document"); RTF, DOCX and ODT content under a `.doc` name is read as that format. Only files made by Word 365 were tested. ODT keeps headings, lists, tables, links and PNG, JPEG, GIF and BMP pictures; text frames and drawings are not read. RTF keeps paragraphs, bold and italic, links and tables; headings, lists and pictures are not read. Either one gives a warning and the original is kept.
 - An animated GIF keeps every frame only for PDF, TIFF, GIF and WebP outputs.
 
 Details: `docs\known-issues.md`.

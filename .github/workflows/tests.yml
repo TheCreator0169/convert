@@ -16,8 +16,20 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-      - name: Install ffmpeg (audio and video tests are skipped without it)
-        run: choco install ffmpeg -y --no-progress
+      - name: Install ffmpeg (up to 4 tries: the Chocolatey feed times out now and then; audio and video tests are skipped without it)
+        shell: pwsh
+        run: |
+          for ($i = 1; $i -le 4; $i++) {
+            choco install ffmpeg -y --no-progress
+            if ($LASTEXITCODE -eq 0) { break }
+            Write-Host "choco attempt $i failed (exit $LASTEXITCODE)"
+            if ($i -lt 4) { Start-Sleep -Seconds (15 * $i) }
+          }
+          "C:\ProgramData\chocolatey\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
+          if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) { throw 'ffmpeg is not installed: the video tests would be skipped or fail' }
+          ffmpeg -version *> $null
+          if ($LASTEXITCODE -ne 0) { throw 'ffmpeg does not run' }
       - name: Install the pinned dependencies
         run: pip install -r requirements.txt
       - name: Run every suite
