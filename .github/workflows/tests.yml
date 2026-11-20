@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-      - name: Install ffmpeg (up to 4 tries: the Chocolatey feed times out now and then; audio and video tests are skipped without it)
+      - name: Install ffmpeg, up to 4 tries (the Chocolatey feed times out now and then)
         shell: pwsh
         run: |
           for ($i = 1; $i -le 4; $i++) {
