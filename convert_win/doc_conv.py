@@ -1,4 +1,4 @@
-"""Documents: TXT, MD, HTML, RTF, DOCX, ODT in; PDF, DOCX, ODT, RTF, TXT, HTML out. Qt's text engine is the hub."""
+"""Documents: TXT, MD, HTML, RTF, DOCX, ODT, DOC (text only) in; PDF, DOCX, ODT, RTF, TXT, HTML out. Qt's text engine is the hub."""
 import html
 import re
 import zipfile
@@ -9,6 +9,7 @@ from PySide6.QtGui import (QAbstractTextDocumentLayout, QColor, QPageLayout, QPa
                            QTextCursor, QTextDocument, QTextDocumentWriter, QTextListFormat, QTextTable)
 from PySide6.QtWidgets import QApplication
 
+from . import doc_binary
 from .process import Cancelled
 
 # stdlib zipfile inflates a whole member in one call otherwise (default cap 2 GB); with 16 MB each call yields at most 16 MB
@@ -474,7 +475,27 @@ def _rtf_html(text):
     return "".join(blocks)
 
 
-def load(path):
+def _doc_kind(path):
+    """What a file named .doc really is: 'ole', 'rtf', 'docx' or 'odt'. Anything else is refused."""
+    kind = doc_binary.sniff(path)
+    if kind == "docx":  # every zip starts with PK: a DOCX has word/document.xml, an ODT has the ODF mimetype
+        try:
+            with zipfile.ZipFile(path) as z:
+                names = z.namelist()
+                mime = z.read("mimetype") if "mimetype" in names and z.getinfo("mimetype").file_size < 1000 else b""
+        except zipfile.BadZipFile as e:
+            raise ValueError("not a Word document") from e
+        if "word/document.xml" in names:
+            return "docx"
+        if mime.strip() == b"application/vnd.oasis.opendocument.text":
+            return "odt"
+        raise ValueError("not a Word document")
+    if kind == "other":  # HTML, WordML, plain text, or any other file with a .doc name
+        raise ValueError("not a Word document")
+    return kind
+
+
+def load(path, cancel=None):
     ext = Path(path).suffix.lower().lstrip(".")
     doc = QTextDocument()
     if ext in ("md", "markdown"):
@@ -487,6 +508,16 @@ def load(path):
         doc.setHtml(_docx_html(path))
     elif ext == "odt":
         doc.setHtml(_odt_html(path))
+    elif ext == "doc":  # legacy Word: the content decides, a renamed RTF, DOCX or ODT is read as that
+        kind = _doc_kind(path)
+        if kind == "rtf":
+            doc.setHtml(_rtf_html(_read(path)))
+        elif kind == "docx":
+            doc.setHtml(_docx_html(path))
+        elif kind == "odt":
+            doc.setHtml(_odt_html(path))
+        else:
+            doc.setPlainText(doc_binary.read_text(path, cancel))
     else:
         doc.setPlainText(_read(path))
     _strip_local_images(doc)
@@ -670,7 +701,8 @@ def _write_rtf(doc, dst):
     Path(dst).write_text("".join(parts), "ascii")
 
 
-LOSSY_IN = {"rtf": "RTF headings, lists and pictures were not carried over"}
+LOSSY_IN = {"rtf": "RTF headings, lists and pictures were not carried over",
+            "doc": "formatting, tables and pictures were not carried over (text only)"}
 DOCX_DROPPED = ("<w:pict", "<w:txbxContent", "<w:object")  # parts the DOCX reader skips
 
 
@@ -722,7 +754,7 @@ def _docx_loses_content(path):
 def convert(src, dst, fmt, opts, cancel=None):
     """Returns a warning string when part of the source was not carried over, else None. Cancel is checked per page."""
     QApplication.instance() or QApplication(["convert"])  # QApplication, not QGuiApplication: the window needs that type
-    doc = load(src)
+    doc = load(src, cancel)
     if cancel is not None and cancel.is_set():
         raise Cancelled()
     if fmt.id == "pdf":
@@ -742,6 +774,8 @@ def convert(src, dst, fmt, opts, cancel=None):
     else:
         Path(dst).write_text(doc.toPlainText(), "utf-8")
     ext = Path(src).suffix.lower().lstrip(".")
+    if ext == "doc":  # the warning follows the content, as load() does
+        ext = {"ole": "doc", "rtf": "rtf", "docx": "docx", "odt": "odt"}[_doc_kind(src)]
     if ext == "docx" and _docx_loses_content(src):
         return "text boxes, vector images or legacy objects were not carried over"
     if ext == "odt":

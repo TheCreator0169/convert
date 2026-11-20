@@ -7,7 +7,7 @@ INPUTS = {
     "audio": "mp3 m4a aac wav aiff aif flac opus ogg oga wma ac3 wv mp2",
     "video": "mp4 mov webm mkv avi m4v wmv flv mpg mpeg 3gp",
     "image": "jpg jpeg png heic heif avif webp tif tiff gif bmp",
-    "doc": "txt md markdown html htm rtf docx odt",
+    "doc": "txt md markdown html htm rtf doc docx odt",
     "pdf": "pdf",
 }
 EXT_TYPE = {e: t for t, exts in INPUTS.items() for e in exts.split()}

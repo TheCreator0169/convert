@@ -263,6 +263,9 @@ numpy==2.5.5 \
     # via
     #   onnxruntime
     #   pymupdf
+olefile==0.47 \
+    --hash=sha256:543c7da2a7adadf21214938bb79c83ea12b473a4b6ee4ad4bf854e7715e13d1f \
+    # via -r requirements.in
 onnxruntime==1.32.0 \
     --hash=sha256:02ea12a28c069ea8510093d95a7f6ff8126bfd9fc5c0d3381c03b80fb2b424ba \
     --hash=sha256:2303372a85299b6757b0e11e1cbf13e410ddf7e10c37f4b37e99d1c90e7daf7c \

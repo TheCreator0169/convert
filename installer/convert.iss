@@ -136,7 +136,7 @@ var
   Exts: String;
   P: Integer;
 begin
-  Exts := 'mp3,m4a,aac,wav,aiff,aif,flac,opus,ogg,oga,wma,ac3,wv,mp2,mp4,mov,webm,mkv,avi,m4v,wmv,flv,mpg,mpeg,3gp,jpg,jpeg,png,heic,heif,avif,webp,tif,tiff,gif,bmp,txt,md,markdown,html,htm,rtf,docx,odt,pdf,';
+  Exts := 'mp3,m4a,aac,wav,aiff,aif,flac,opus,ogg,oga,wma,ac3,wv,mp2,mp4,mov,webm,mkv,avi,m4v,wmv,flv,mpg,mpeg,3gp,jpg,jpeg,png,heic,heif,avif,webp,tif,tiff,gif,bmp,txt,md,markdown,html,htm,rtf,doc,docx,odt,pdf,';
   while Exts <> '' do
   begin
     P := Pos(',', Exts);

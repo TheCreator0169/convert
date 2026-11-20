@@ -16,7 +16,7 @@ The result goes **next to the original** and nothing is overwritten. Convert man
 | 🎵 Audio | MP3, M4A, WAV, AIFF, FLAC, ALAC, Opus, OGG, WMA, AC3, WavPack, MP2 |
 | 🎬 Video | MP4 (H.264, HEVC, AV1), MOV, WebM, MKV, GIF, or any audio format |
 | 🖼️ Images | JPEG, PNG, HEIC, AVIF, WebP, TIFF, GIF, BMP, PDF |
-| 📄 Documents | PDF, DOCX, ODT, RTF, TXT, HTML (from TXT, MD, HTML, RTF, DOCX, ODT) |
+| 📄 Documents | PDF, DOCX, ODT, RTF, TXT, HTML (from TXT, MD, HTML, RTF, DOC, DOCX, ODT) |
 | 📕 PDF | PNG or JPEG (one per page), TXT |
 
 ## Install
@@ -37,7 +37,7 @@ Windows Settings, Apps, Convert. It removes the program and the menu entry, and 
 
 ## Known limits
 
-- Legacy `.doc` is not supported. RTF and ODT inputs keep the text only.
+- Legacy `.doc` (Word 97-2003) inputs keep the text only: no formatting, pictures, headers, footnotes or text boxes (headers, footnotes and text boxes are not read at all); tables become tab-separated lines, and an empty cell in the middle of a row is lost. Password-protected files are refused. A `.doc` name on HTML, WordML or plain text is refused ("not a Word document"); RTF, DOCX and ODT content under a `.doc` name is read as that format. Only files made by Word 365 were tested. RTF and ODT inputs keep the text only too.
 - An animated GIF keeps every frame only for PDF, TIFF, GIF and WebP outputs.
 
 Details: `docs\known-issues.md`.
