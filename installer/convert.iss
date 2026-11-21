@@ -56,10 +56,11 @@ Name: "win11menu"; Description: "{cm:Win11Menu}"; GroupDescription: "{cm:Additio
 Type: filesandordirs; Name: "{app}\_internal"
 
 [Files]
-Source: "..\dist\Convert\*"; DestDir: "{app}"; Excludes: "win11\*,ConvertMenu.dll"; Flags: recursesubdirs ignoreversion
+Source: "..\dist\Convert\*"; DestDir: "{app}"; Excludes: "win11\*,ConvertMenu.dll,Assets\*"; Flags: recursesubdirs ignoreversion
 ; The Windows 11 menu files go only to Windows 11
 Source: "..\dist\Convert\ConvertMenu.dll"; DestDir: "{app}"; Flags: ignoreversion; Check: IsWin11
 Source: "..\dist\Convert\win11\*"; DestDir: "{app}\win11"; Flags: ignoreversion; Check: IsWin11
+Source: "..\dist\Convert\Assets\*"; DestDir: "{app}\Assets"; Flags: ignoreversion recursesubdirs; Check: IsWin11
 
 [Icons]
 Name: "{userprograms}\Convert"; Filename: "{app}\Convert.exe"

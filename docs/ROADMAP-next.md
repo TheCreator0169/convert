@@ -41,6 +41,7 @@ Agent: windows-builder, security-auditor on convert.iss. Needs the user for the 
 ## v0.2.0: bigger features (each only after the user chooses)
 - ~~Light theme + system choice (U6, D5). ui-designer. M.~~ Done in v0.2.1: System, Dark or Light.
 - Windows 11 menu via sparse MSIX: **done in v0.2.4, pending publication** (2026-11-21). Limit: on the user's build 26300 the entry is under "Applications extensions" in the short menu, not at the root. No paid signing; self-signed certificate trusted in LocalMachine\TrustedPeople. L.
+- Quick-convert submenu (user request 2026-11-21, next version after v0.2.4): the Windows 11 entry gets a flyout like WinRAR's (`EnumSubCommands` in `shell_ext\ConvertMenu.cpp`): "Convert to <format>" entries chosen by file type (images: PNG, JPG, WebP...; audio: MP3...; and so on, from `formats.py`), a direct conversion without opening the window, plus "Open Convert...". The same for the classic entry if it can be done with registry subcommands. Needs a decision on which formats to list and where the output goes. M.
 - QSV / AMF encoders: no hardware here; ask the user to test on a PC that has it. S.
 - ~~Legacy .doc input. L / S.~~ Done in v0.2.2: text only (own reader on olefile, no LibreOffice). (HEIC multi-frame: done in v0.2.0.)
 

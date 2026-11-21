@@ -28,7 +28,8 @@ A HEIC with several images, converted to a single-image format, gives one file p
 3. Right-click any file and choose **Convert**.
 
 - Windows warns "protected your PC"? Click **More info**, then **Run anyway**. The installer is not signed.
-- Windows 11: the setup offers **Show Convert in the Windows 11 right-click menu** (ticked by default). It registers a small signed package and adds a certificate to the Trusted People store, which needs **one administrator (UAC) prompt**, so **Convert** appears in the short menu, under **Applications extensions** (Windows files the entries of other apps there; seen on Windows 11 build 26300, not checked on other builds). Decline the prompt, or untick the option, and the entry stays under **Show more options** (or Shift+F10). What is trusted and how to remove it: [SECURITY.md](SECURITY.md).
+- Windows 11: the setup offers **Show Convert in the Windows 11 right-click menu** (ticked by default). It registers a small signed package and adds a certificate to the Trusted People store, which needs **you to accept one administrator (UAC) prompt** (answer it within about 2 minutes, or the option is skipped). Decline it, or untick the option, and **Convert** stays under **Show more options** (or Shift+F10). What is trusted and how to remove it: [SECURITY.md](SECURITY.md).
+- Windows 11, to have **Convert** in the main right-click menu: Windows first puts it in the **Applications extensions** submenu. Right-click a PNG (or any file), choose **Customize menu** (*Personnaliser le menu* in French) at the bottom, open **App extensions** (*Extensions d'application*) and switch **Convert** on. Seen on Windows 11 build 26300; the wording may differ on other builds.
 - Audio and video need ffmpeg: `winget install Gyan.FFmpeg`. Everything else works without it.
 
 Untested on other machines: keep your originals until you trust it.

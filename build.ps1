@@ -41,6 +41,7 @@ if ($LASTEXITCODE) { throw "shell extension build failed" }
 powershell -NoProfile -File tools\make_msix.ps1 -Version $Version.TrimStart('v')
 if ($LASTEXITCODE) { throw "MSIX build failed" }
 Copy-Item build\shell_ext\ConvertMenu.dll dist\Convert\ -Force
+Copy-Item build\win11\Assets dist\Convert\ -Recurse -Force   # logos of the package, looked up in the app folder
 New-Item -ItemType Directory dist\Convert\win11 -Force | Out-Null
 foreach ($f in 'Convert.msix', 'Convert.cer', 'register.ps1', 'unregister.ps1') { Copy-Item "build\win11\$f" dist\Convert\win11\ -Force }
 

@@ -63,6 +63,9 @@ import sys
 from PIL import Image, ImageOps
 src, dst = sys.argv[1], sys.argv[2]
 sizes = {"storelogo.png": 50, "Square44x44Logo.png": 44, "Square150x150Logo.png": 150}
+for n in (16, 24, 32, 48, 256):  # sizes Windows asks for in lists (Settings, Start)
+    sizes[f"Square44x44Logo.targetsize-{n}.png"] = n
+    sizes[f"Square44x44Logo.targetsize-{n}_altform-unplated.png"] = n
 img = Image.open(src).convert("RGBA")
 for name, size in sizes.items():
     ImageOps.fit(img, (size, size), Image.Resampling.LANCZOS).save(os.path.join(dst, name), "PNG")
@@ -75,6 +78,10 @@ for name, size in sizes.items():
     foreach ($name in 'Convert.msix', 'Convert.cer', 'thumbprint.txt', 'register.ps1', 'unregister.ps1') {
         Remove-Item -LiteralPath (Join-Path $Out $name) -Force -ErrorAction SilentlyContinue
     }
+    # A sparse package looks for the logos of its Application in the external location (the app folder), not in the package:
+    # the same files go to $Out\Assets, and build.ps1 copies them to dist\Convert\Assets.
+    Remove-Item -LiteralPath (Join-Path $Out 'Assets') -Recurse -Force -ErrorAction SilentlyContinue
+    Copy-Item -LiteralPath (Join-Path $stage 'Assets') -Destination (Join-Path $Out 'Assets') -Recurse
 
     # (b) throw-away signing certificate, private key not exportable
     $cert = New-SelfSignedCertificate -Type Custom -Subject $Subject -KeyUsage DigitalSignature `
