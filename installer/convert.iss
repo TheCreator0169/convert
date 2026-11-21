@@ -70,8 +70,8 @@ Name: "{userdesktop}\Convert"; Filename: "{app}\Convert.exe"; Tasks: desktopicon
 Filename: "{app}\Convert.exe"; Parameters: "--install-menu"; Flags: runhidden
 ; Windows 11 top-level entry: a signed sparse package. Step 1 (one UAC prompt) trusts its certificate; step 2 registers the package for this account only.
 ; Declining the prompt, or a failure, leaves the classic entry working.
-Filename: "{sysnative}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\win11\register.ps1"" -AppDir ""{app}"" -TrustOnly"; Verb: "runas"; Flags: runhidden shellexec skipifdoesntexist; Tasks: win11menu; Check: IsWin11
-Filename: "{sysnative}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\win11\register.ps1"" -AppDir ""{app}"""; Flags: runhidden skipifdoesntexist; Tasks: win11menu; Check: IsWin11
+Filename: "{sysnative}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\win11\register.ps1"" -AppDir ""{app}"" -TrustOnly"; Verb: "runas"; Flags: runhidden shellexec; Tasks: win11menu; Check: Win11Ready
+Filename: "{sysnative}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\win11\register.ps1"" -AppDir ""{app}"""; Flags: runhidden; Tasks: win11menu; Check: Win11Ready
 Filename: "{app}\Convert.exe"; Description: "{cm:OpenConvert}"; Flags: postinstall nowait skipifsilent
 
 [Registry]
@@ -79,9 +79,9 @@ Filename: "{app}\Convert.exe"; Description: "{cm:OpenConvert}"; Flags: postinsta
 Root: HKCU; Subkey: "Software\Convert"; ValueType: dword; ValueName: "Win11Trust"; ValueData: 1; Flags: uninsdeletekey; Tasks: win11menu; Check: IsWin11
 
 [UninstallRun]
-Filename: "{sysnative}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\win11\unregister.ps1"""; Flags: runhidden skipifdoesntexist; RunOnceId: "RemoveWin11Menu"
+Filename: "{sysnative}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\win11\unregister.ps1"""; Flags: runhidden; RunOnceId: "RemoveWin11Menu"; Check: Win11Installed
 ; One UAC prompt to remove the certificate, only when setup added it
-Filename: "{sysnative}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\win11\unregister.ps1"" -CertOnly"; Verb: "runas"; Flags: runhidden shellexec skipifdoesntexist; RunOnceId: "RemoveWin11Cert"; Check: Win11TrustAdded
+Filename: "{sysnative}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\win11\unregister.ps1"" -CertOnly"; Verb: "runas"; Flags: runhidden shellexec; RunOnceId: "RemoveWin11Cert"; Check: Win11TrustAdded
 Filename: "{app}\Convert.exe"; Parameters: "--uninstall-menu"; Flags: runhidden; RunOnceId: "RemoveMenu"
 
 [UninstallDelete]
@@ -128,6 +128,17 @@ var
 begin
   GetWindowsVersionEx(V);
   Result := (V.Major = 10) and (V.Build >= 22000);
+end;
+
+{ skipifdoesntexist is not used: it looks for the {sysnative} path through file redirection and can skip the entry silently. }
+function Win11Ready(): Boolean;
+begin
+  Result := IsWin11() and FileExists(ExpandConstant('{app}\win11\register.ps1'));
+end;
+
+function Win11Installed(): Boolean;
+begin
+  Result := FileExists(ExpandConstant('{app}\win11\unregister.ps1'));
 end;
 
 function Win11TrustAdded(): Boolean;
