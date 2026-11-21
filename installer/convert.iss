@@ -68,12 +68,20 @@ Name: "{userdesktop}\Convert"; Filename: "{app}\Convert.exe"; Tasks: desktopicon
 [Run]
 ; Adds "Convert" to the Explorer right-click menu (HKCU only)
 Filename: "{app}\Convert.exe"; Parameters: "--install-menu"; Flags: runhidden
-; Windows 11 top-level entry: a signed sparse package; its certificate is trusted for this user only (no admin). A failure here leaves the classic entry working.
+; Windows 11 top-level entry: a signed sparse package. Step 1 (one UAC prompt) trusts its certificate; step 2 registers the package for this account only.
+; Declining the prompt, or a failure, leaves the classic entry working.
+Filename: "{sysnative}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\win11\register.ps1"" -AppDir ""{app}"" -TrustOnly"; Verb: "runas"; Flags: runhidden shellexec skipifdoesntexist; Tasks: win11menu; Check: IsWin11
 Filename: "{sysnative}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\win11\register.ps1"" -AppDir ""{app}"""; Flags: runhidden skipifdoesntexist; Tasks: win11menu; Check: IsWin11
 Filename: "{app}\Convert.exe"; Description: "{cm:OpenConvert}"; Flags: postinstall nowait skipifsilent
 
+[Registry]
+; Remembers that setup trusted the certificate, so uninstall asks for the administrator prompt only then
+Root: HKCU; Subkey: "Software\Convert"; ValueType: dword; ValueName: "Win11Trust"; ValueData: 1; Flags: uninsdeletekey; Tasks: win11menu; Check: IsWin11
+
 [UninstallRun]
 Filename: "{sysnative}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\win11\unregister.ps1"""; Flags: runhidden skipifdoesntexist; RunOnceId: "RemoveWin11Menu"
+; One UAC prompt to remove the certificate, only when setup added it
+Filename: "{sysnative}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\win11\unregister.ps1"" -CertOnly"; Verb: "runas"; Flags: runhidden shellexec skipifdoesntexist; RunOnceId: "RemoveWin11Cert"; Check: Win11TrustAdded
 Filename: "{app}\Convert.exe"; Parameters: "--uninstall-menu"; Flags: runhidden; RunOnceId: "RemoveMenu"
 
 [UninstallDelete]
@@ -120,6 +128,11 @@ var
 begin
   GetWindowsVersionEx(V);
   Result := (V.Major = 10) and (V.Build >= 22000);
+end;
+
+function Win11TrustAdded(): Boolean;
+begin
+  Result := RegValueExists(HKCU, 'Software\Convert', 'Win11Trust');
 end;
 
 { An upgrade: unregister the old package first, so Explorer's COM host lets go of ConvertMenu.dll before the files are replaced. }

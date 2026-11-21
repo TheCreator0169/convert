@@ -1,26 +1,31 @@
-# Removes the Convert sparse package for the current user and the CN=TheCreator0169 certificates
-# from TrustedPeople. Exit 0 even when there is nothing to remove.
-# -Machine: also works on LocalMachine\TrustedPeople (needs an elevated prompt).
+# Undoes register.ps1, in two steps.
+# Without a switch (normal user): remove the package TheCreator0169.Convert for this account and release ConvertMenu.dll.
+# -CertOnly (elevated, administrator): remove our certificate (CN=TheCreator0169, self-signed) from Cert:\LocalMachine\TrustedPeople.
+# Exit 0 even when there is nothing to remove.
 param(
-    [switch]$Machine
+    [switch]$CertOnly
 )
 
 $ErrorActionPreference = 'Stop'
 $PkgName = 'TheCreator0169.Convert'
 $Subject = 'CN=TheCreator0169'
+$store = 'Cert:\LocalMachine\TrustedPeople'
 
-function Stop-Unregister([string]$Reason, [string]$Detail) {
-    [Console]::Error.WriteLine("unregister failed: $Reason")
-    if ($Detail) { [Console]::Error.WriteLine($Detail) }
-    exit 1
-}
-
-if ($Machine) {
+if ($CertOnly) {
     $id = [Security.Principal.WindowsIdentity]::GetCurrent()
     $isAdmin = ([Security.Principal.WindowsPrincipal]$id).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-    if (-not $isAdmin) { Stop-Unregister '-Machine needs an elevated (administrator) prompt' $null }
+    if (-not $isAdmin) { [Console]::Error.WriteLine('unregister failed: -CertOnly needs an elevated (administrator) prompt'); exit 1 }
+    try {
+        Get-ChildItem -LiteralPath $store |
+            Where-Object { $_.Subject -ceq $Subject -and $_.Issuer -ceq $Subject } |  # ours: exact name, self-signed
+            Remove-Item -Force -ErrorAction Stop
+    } catch {
+        [Console]::Error.WriteLine("unregister: cannot remove the certificate from ${store}: $($_.Exception.Message)")
+        exit 1
+    }
+    Write-Output "removed the certificate from $store"
+    exit 0
 }
-$store = if ($Machine) { 'Cert:\LocalMachine\TrustedPeople' } else { 'Cert:\CurrentUser\TrustedPeople' }
 
 $failed = $false
 try {
@@ -41,16 +46,6 @@ foreach ($p in @(Get-Process -Name dllhost -ErrorAction SilentlyContinue)) {
     } catch { }  # not ours, protected, or already gone
 }
 
-# The certificate is removed even if the package removal failed: the package no longer needs it once installed.
-try {
-    Get-ChildItem -LiteralPath $store |
-        Where-Object { $_.Subject -ceq $Subject -and $_.Issuer -ceq $Subject } |  # ours: exact name, self-signed
-        Remove-Item -Force -ErrorAction Stop
-} catch {
-    $failed = $true
-    [Console]::Error.WriteLine("unregister: cannot remove the certificate from ${store}: $($_.Exception.Message)")
-}
-
 if ($failed) { exit 1 }
-Write-Output "unregistered $PkgName (store $store)"
+Write-Output "unregistered $PkgName"
 exit 0

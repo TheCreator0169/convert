@@ -1,11 +1,11 @@
-# Registers the Convert sparse package for the current user (no admin by default).
-# Ships next to Convert.msix and Convert.cer in the installer. Only touches the two TrustedPeople
-# stores and the package TheCreator0169.Convert.
+# Registers the Convert sparse package, in two steps. Ships next to Convert.msix and Convert.cer in the installer.
+# Only touches Cert:\LocalMachine\TrustedPeople (certificate CN=TheCreator0169) and the package TheCreator0169.Convert.
 # -AppDir: folder that holds Convert.exe and ConvertMenu.dll (the external location).
-# -Machine: trust the certificate for all users (LocalMachine); needs an elevated prompt.
+# -TrustOnly: step 1, elevated (administrator): trust the certificate, then stop.
+# Without it: step 2, normal user: register the package for this account; the certificate must already be trusted.
 param(
     [Parameter(Mandatory = $true)][string]$AppDir,
-    [switch]$Machine
+    [switch]$TrustOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -49,21 +49,26 @@ try {
 if ($cert.Subject -ne $Subject) { Stop-Register "certificate subject is not $Subject" $cert.Subject }
 $thumb = $cert.Thumbprint
 
-if ($Machine -and -not (Test-Admin)) {
-    Stop-Register '-Machine needs an elevated (administrator) prompt' $null
-}
-$store = if ($Machine) { 'Cert:\LocalMachine\TrustedPeople' } else { 'Cert:\CurrentUser\TrustedPeople' }
+$store = 'Cert:\LocalMachine\TrustedPeople'  # Windows refuses a package whose certificate is only in the per-user store (0x800B0109)
 
-$alreadyTrusted = (Test-Path -LiteralPath (Join-Path 'Cert:\CurrentUser\TrustedPeople' $thumb)) -or
-                  (Test-Path -LiteralPath (Join-Path 'Cert:\LocalMachine\TrustedPeople' $thumb))
-$imported = $false
-if (-not $alreadyTrusted) {
+if ($TrustOnly) {
+    # Step 1 of 2, run elevated by the installer: trust the certificate, drop older copies of ours, nothing else.
+    if (-not (Test-Admin)) { Stop-Register '-TrustOnly needs an elevated (administrator) prompt' $null }
     try {
-        $imported = $true
         Import-Certificate -FilePath $cerPath -CertStoreLocation $store | Out-Null
+        Get-ChildItem -LiteralPath $store |
+            Where-Object { $_.Subject -ceq $Subject -and $_.Issuer -ceq $Subject -and $_.Thumbprint -ne $thumb } |
+            Remove-Item -Force -ErrorAction SilentlyContinue
     } catch {
         Stop-Register "cannot import the certificate into $store" $_.Exception.Message
     }
+    Write-Output "trusted certificate $thumb ($store)"
+    exit 0
+}
+
+# Step 2 of 2, normal user: the package registers for this account only.
+if (-not (Test-Path -LiteralPath (Join-Path $store $thumb))) {
+    Stop-Register 'the certificate is not trusted yet (the administrator step was declined or failed)' $null
 }
 
 # Replace an older Convert package. Its certificate is cleaned up only after the new one installs.
@@ -78,17 +83,8 @@ try {
 try {
     Add-AppxPackage -Path $msixPath -ExternalLocation $AppDir -ErrorAction Stop
 } catch {
-    # Do not leave a trusted certificate behind for a package that did not install.
-    if ($imported) { Remove-Item -LiteralPath (Join-Path $store $thumb) -Force -ErrorAction SilentlyContinue }
     Stop-Register "Add-AppxPackage failed" $_.Exception.Message
 }
 
-# Remove superseded certificates: only CN=TheCreator0169 certs with another thumbprint.
-try {
-    Get-ChildItem -LiteralPath $store |
-        Where-Object { $_.Subject -eq $Subject -and $_.Thumbprint -ne $thumb } |
-        Remove-Item -Force -ErrorAction Stop
-} catch { }  # an old certificate left behind is harmless; the new package is installed
-
-Write-Output "registered $PkgName (certificate $thumb, store $store)"
+Write-Output "registered $PkgName (certificate $thumb)"
 exit 0

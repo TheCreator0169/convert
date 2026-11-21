@@ -24,11 +24,11 @@ A HEIC with several images, converted to a single-image format, gives one file p
 ## Install
 
 1. Download `Convert-Setup-vX.Y.Z.exe` from the [latest release](https://github.com/TheCreator0169/convert/releases/latest).
-2. Run it (no admin rights needed).
+2. Run it (no admin rights needed, except for the optional Windows 11 menu step below).
 3. Right-click any file and choose **Convert**.
 
 - Windows warns "protected your PC"? Click **More info**, then **Run anyway**. The installer is not signed.
-- Windows 11: the setup offers **Show Convert in the Windows 11 right-click menu** (ticked by default). It registers a small signed package and adds a certificate, trusted for your account only (no admin prompt), so **Convert** appears in the short menu. Untick it and the entry stays under **Show more options** (or Shift+F10). What is trusted and how to remove it: [SECURITY.md](SECURITY.md).
+- Windows 11: the setup offers **Show Convert in the Windows 11 right-click menu** (ticked by default). It registers a small signed package and adds a certificate to the Trusted People store, which needs **one administrator (UAC) prompt**, so **Convert** appears in the short menu. Decline the prompt and the classic entry still works. Untick it and the entry stays under **Show more options** (or Shift+F10). What is trusted and how to remove it: [SECURITY.md](SECURITY.md).
 - Audio and video need ffmpeg: `winget install Gyan.FFmpeg`. Everything else works without it.
 
 Untested on other machines: keep your originals until you trust it.
@@ -39,11 +39,11 @@ Theme: right-click the version label at the bottom of the window and choose Syst
 
 ## Uninstall
 
-Windows Settings, Apps, Convert. It removes the program, the menu entries, the Windows 11 package and its certificate, and asks whether to keep your settings.
+Windows Settings, Apps, Convert. It removes the program, the menu entries, the Windows 11 package and its certificate (one more administrator prompt), and asks whether to keep your settings.
 
 ## Security
 
-Everything runs locally; the only network call is the optional daily update check. The installer is not code-signed, and it needs no admin rights. The Windows 11 menu option adds one self-signed certificate (`CN=TheCreator0169`) to your own account's Trusted People store; its private key is deleted when the release is built. Full list of what is installed, trusted and removed, and how to report a problem: [SECURITY.md](SECURITY.md).
+Everything runs locally; the only network call is the optional daily update check. The installer is not code-signed. It needs no admin rights, except for the optional Windows 11 menu step, which asks once to add one self-signed certificate (`CN=TheCreator0169`) to the machine's Trusted People store; its private key is deleted when the release is built. Full list of what is installed, trusted and removed, and how to report a problem: [SECURITY.md](SECURITY.md).
 
 ## Known limits
 
