@@ -130,7 +130,7 @@ begin
   Result := (V.Major = 10) and (V.Build >= 22000);
 end;
 
-{ skipifdoesntexist is not used: it looks for the {sysnative} path through file redirection and can skip the entry silently. }
+// skipifdoesntexist is not used: it looks for the sysnative path through file redirection and can skip the entry silently.
 function Win11Ready(): Boolean;
 begin
   Result := IsWin11() and FileExists(ExpandConstant('{app}\win11\register.ps1'));
