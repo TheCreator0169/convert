@@ -40,18 +40,18 @@ Agent: windows-builder, security-auditor on convert.iss. Needs the user for the 
 
 ## v0.2.0: bigger features (each only after the user chooses)
 - ~~Light theme + system choice (U6, D5). ui-designer. M.~~ Done in v0.2.1: System, Dark or Light.
-- Windows 11 top-level menu via sparse MSIX: needs signing (I7), so decide signing first. L.
+- Windows 11 menu via sparse MSIX: **done in v0.2.4, pending publication** (2026-11-21). Limit: on the user's build 26300 the entry is under "Applications extensions" in the short menu, not at the root. No paid signing; self-signed certificate trusted in LocalMachine\TrustedPeople. L.
 - QSV / AMF encoders: no hardware here; ask the user to test on a PC that has it. S.
 - ~~Legacy .doc input. L / S.~~ Done in v0.2.2: text only (own reader on olefile, no LibreOffice). (HEIC multi-frame: done in v0.2.0.)
 
 ## Doc fixes (any time, no version)
 Done: ROADMAP.md D2 (built in v0.1.13); known-issues GIF line gone; H9 done (v0.1.14); convert-testing `test_process` wording fixed (2026-11-20).
 Open, planned in v0.2.3 (in progress, not built): refuse network and device paths; write the lossy `.doc` warning to the log; replace the fixed 6 s sleep in test_single_instance (still `time.sleep(6)`, flaky); docs.
-Windows 11 top-level menu: open, deferred (would be v0.2.4); the signing route and C++ toolchain are undecided.
+Windows 11 menu: done in v0.2.4, pending publication (2026-11-21). Sparse MSIX and native C++ DLL; on the user's build 26300 the entry is under "Applications extensions", not at the root. Not checked on other builds.
 Agent: builder, then reviewer.
 
 ## Decisions for the user
 - D8: refuse `\\server\share` files (my advice) or accept?
 - Order: hardening first (my advice), or the window first?
-- Signing (I7): yes/no. It costs money and blocks the Windows 11 menu.
+- Signing (I7): answered 2026-11-21: no paid signing. The MSIX uses a self-signed certificate trusted on the machine (LocalMachine\TrustedPeople, one UAC prompt).
 - Anything not listed above is not planned.

@@ -136,8 +136,9 @@ public:
 
     STDMETHODIMP GetState(IShellItemArray* psiItemArray, BOOL, EXPCMDSTATE* pState) override {
         if (!pState) return E_POINTER;
+        // The top-level menu can ask before a selection is set: show the entry then (Invoke still picks only supported files).
+        if (!psiItemArray) { *pState = ECS_ENABLED; return S_OK; }
         *pState = ECS_HIDDEN;
-        if (!psiItemArray) return S_OK;
 
         DWORD count = 0;
         if (FAILED(psiItemArray->GetCount(&count))) return S_OK;

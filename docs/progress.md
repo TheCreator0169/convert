@@ -5,9 +5,17 @@ Build details (hashes, archives) live in `BUILD_HISTORY.md`; do not copy them he
 
 ## Current work
 
-**v0.1.13 published (2026-11-19), main at the history commit after `f9c5bca`.** Everything the user asked for is released: window redone (440 px wide, height follows the content and is not resizable, files as wrapping tiles, restyled selects and Advanced, version at the bottom, title just "Convert"), installer (license, English/French, optional desktop shortcut, clean upgrade, ffmpeg note on the last page), README rewritten (screenshot, numbered install, emojis), daily update notice (the one network call, off with `update_check: false`). 181 tests green, CI green.
+**Latest published release: v0.2.3.** v0.1.14 to v0.2.3 are all published on GitHub (v0.1.13 is no longer the latest).
 
-**Open, in the user's hands or needing an OK:** QSV and AMF encoders (no such hardware here; NVENC tested on an RTX 3050); Windows 11 top-level menu (sparse MSIX, not started); D1-D7 of `docs\ROADMAP.md` (defaults applied, not re-read).
+**v0.2.4 in progress (2026-11-21): Windows 11 menu. Not built, not published, not committed.**
+- Code: a sparse MSIX package `TheCreator0169.Convert` (`win11\AppxManifest.xml`, one desktop10 ItemType "*" entry with Verb Id 0000ConvertMenu) and a native C++ IExplorerCommand DLL (`shell_ext\ConvertMenu.cpp`, built by `tools\build_shell_ext.ps1` with VS 2019 Build Tools). The entry is hidden unless a selected file has a supported extension; it starts Convert.exe with the selected files.
+- Signing: `tools\make_msix.ps1` signs with a throw-away self-signed certificate CN=TheCreator0169; its private key is deleted at the end of the build. No SignPath, no paid certificate.
+- Installer: still PrivilegesRequired=lowest. Optional task `win11menu` (Windows 11 only, ticked by default) runs `register.ps1` in two steps: `-TrustOnly` elevated (one UAC prompt) adds the certificate to Cert:\LocalMachine\TrustedPeople, then a normal-user step runs Add-AppxPackage -ExternalLocation. Uninstall runs `unregister.ps1` (package) and, only if `HKCU\Software\Convert\Win11Trust` exists, one more UAC prompt to remove the certificate (`unregister.ps1 -CertOnly`).
+- Real result on the user's Windows 11 build 26300: the entry is NOT at the root of the short menu. Windows lists it under "Applications extensions" in the short menu (user confirmed). So the top-level goal is not reached on this build. Other Windows 11 builds not checked. Windows 10 has no such menu.
+- Not verified yet: the uninstall path (UAC to remove the certificate); upgrade over an existing package at the user's PC through the installer UI (not silent); multi-file selection launching one window; whether the second "Convert" under "Show more options" (classic HKCU verb plus the package entry) is acceptable; other Windows 11 builds.
+- README.md and SECURITY.md were already updated for this.
+
+**Open, in the user's hands or needing an OK:** QSV and AMF encoders (no such hardware here; NVENC tested on an RTX 3050); the v0.2.4 items above; D1-D7 of `docs\ROADMAP.md` (defaults applied, not re-read).
 ## Done
 
 - Omega structure (`.claude\`: 8 Haiku agents, 7 skills, settings; `CLAUDE.md`; `docs\`).
@@ -30,3 +38,7 @@ Build details (hashes, archives) live in `BUILD_HISTORY.md`; do not copy them he
 - 2026-11-19: copyright holder kept as TheCreator0169 (user's decision). The only open items are QSV/AMF encoders (no hardware here) and the Windows 11 top-level menu.
 - 2026-11-20: v0.1.15 to v0.2.2 released, each hash checked on GitHub (full commit hash as target). v0.1.15-0.1.18: hardening, tile states, accessibility, compact installer. v0.2.0: HEIC with several images gives one file per image. v0.2.1: light theme and Theme choice (System/Dark/Light; right-click the version label, or Tab then Menu key). v0.2.2: legacy `.doc` input, text only (own reader on olefile 0.47). Each of 0.2.0 to 0.2.2 was installed over the previous one on the user's PC and tried before publishing. 488 tests. Details and what was not verified: `BUILD_HISTORY.md`.
 - 2026-11-20 decision: the user stopped at v0.2.2 and asked for a cleanup release, v0.2.3 (in progress, not yet built). The Windows 11 top-level menu is deferred and would be v0.2.4: it needs a signing route (SignPath Foundation, a paid certificate of about 220-300 USD a year, or none), VS Build Tools and the Windows SDK, a native C++ DLL and a sparse MSIX, and a change to ROADMAP D4. The "Show more options" menu stays. Open items: QSV/AMF encoders (no hardware), Windows 11 top-level menu, real iPhone HEIC and non-Western `.doc` files untested, the lossy warning for `.doc` not seen in the frozen console.
+- 2026-11-21: v0.1.14 to v0.2.3 are published on GitHub (the 2026-11-19 line "Not pushed yet" for v0.1.14 is out of date). This file's status line for v0.1.13 as latest was out of date too; corrected in Current work.
+- 2026-11-21: v0.2.4 started: Windows 11 menu through a sparse MSIX and a native C++ IExplorerCommand DLL (details in Current work). Code written; not built, not published, not committed.
+- 2026-11-21 decision: per-user trust does not work (see decisions.md); the certificate goes to LocalMachine\TrustedPeople with one UAC prompt.
+- 2026-11-21 result: on the user's Windows 11 build 26300 the entry is under "Applications extensions" in the short menu, not at the root (user confirmed).

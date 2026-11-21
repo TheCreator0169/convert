@@ -1,6 +1,6 @@
 # Convert for Windows: roadmap
 
-Status 2026-11-20: **v0.2.2 is the latest release** (public on `github.com/TheCreator0169/convert`, MIT). This file is the plan as it was written, kept as history: each table says what was built, released or dropped. Release dates are in `docs\progress.md`. The versions did not ship in the order below (v0.1.9 brought the installer pages, the window came in v0.1.11, v0.1.10 was never published); see progress.md for what each release contains.
+Status 2026-11-21: **v0.2.3 is the latest published release** (v0.2.4 Windows 11 menu in progress, not published) (public on `github.com/TheCreator0169/convert`, MIT). This file is the plan as it was written, kept as history: each table says what was built, released or dropped. Release dates are in `docs\progress.md`. The versions did not ship in the order below (v0.1.9 brought the installer pages, the window came in v0.1.11, v0.1.10 was never published); see progress.md for what each release contains.
 
 Goal stays the same: right-click a file, choose Convert, done. 100 % local, no account, no telemetry.
 
@@ -143,4 +143,4 @@ Agents: scout (list), tester (writes), reviewer. Done when: >= 120 tests, CI gre
 
 ## Not planned unless you ask
 
-Top-level entry in the short Windows 11 menu (needs a signed MSIX package; deferred, see progress.md), Excel/PowerPoint, a website, telemetry. Legacy `.doc` input was added in v0.2.2 (text only).
+Excel/PowerPoint, a website, telemetry. Legacy `.doc` input was added in v0.2.2 (text only).

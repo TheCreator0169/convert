@@ -44,22 +44,7 @@ try {
         Require-File $f
     }
 
-    # Supported extensions come from the one format table.
-    Push-Location $Root
-    try {
-        $exts = @(& $py -c 'from convert_win.formats import EXT_TYPE; print(chr(10).join(sorted(EXT_TYPE)))')
-        if ($LASTEXITCODE -ne 0) { throw "cannot read EXT_TYPE from convert_win.formats (exit $LASTEXITCODE)" }
-    } finally {
-        Pop-Location
-    }
-    $exts = @($exts | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-    if ($exts.Count -eq 0) { throw 'no extensions found in convert_win.formats.EXT_TYPE' }
-    foreach ($e in $exts) { if ($e -notmatch '^[a-z0-9]+$') { throw "unexpected extension '$e'" } }
-
-    $items = ($exts | ForEach-Object {
-        '            <desktop5:ItemType Type=".{0}"><desktop5:Verb Id="ConvertMenu" Clsid="{1}" /></desktop5:ItemType>' -f $_, $Clsid
-    }) -join "`r`n"
-
+    # The manifest has one entry for every file; the supported extensions live in shell_ext\exts.h (generated from EXT_TYPE).
     $tag = [guid]::NewGuid().ToString('N')
     $work = Join-Path ([IO.Path]::GetTempPath()) "convert-msix-$tag"
     $stage = Join-Path $work 'stage'
@@ -67,7 +52,7 @@ try {
     $utf8 = New-Object System.Text.UTF8Encoding($false)
 
     # (a) staged manifest and Assets (the DLL stays in the external app folder)
-    $xml = [IO.File]::ReadAllText($template).Replace('@VERSION@', $Version).Replace('@ITEMTYPES@', $items)
+    $xml = [IO.File]::ReadAllText($template).Replace('@VERSION@', $Version)
     $null = [xml]$xml   # fails loudly if the filled template is not well-formed
     [IO.File]::WriteAllText((Join-Path $stage 'AppxManifest.xml'), $xml, $utf8)
 

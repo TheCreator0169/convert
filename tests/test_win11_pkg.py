@@ -22,7 +22,7 @@ CPP = REPO / "shell_ext" / "ConvertMenu.cpp"
 DLL = Path(os.environ.get("CONVERT_SHELL_DLL") or REPO / "build" / "shell_ext" / "ConvertMenu.dll")
 SUBJECT = "CN=TheCreator0169"
 CLSID = "6D1C2F3A-8B47-4E59-9A0C-3F5B7E21D4C8"
-NS_DESKTOP5 = "{http://schemas.microsoft.com/appx/manifest/desktop/windows10/5}"
+NS_DESKTOP10 = "{http://schemas.microsoft.com/appx/manifest/desktop/windows10/10}"
 NS_APPX = "{http://schemas.microsoft.com/appx/manifest/foundation/windows10}"
 POWERSHELL = "powershell.exe"
 
@@ -48,7 +48,14 @@ class ManifestTemplate(unittest.TestCase):
 
     def test_has_placeholders(self):
         self.assertIn("@VERSION@", self.text)
-        self.assertIn("@ITEMTYPES@", self.text)
+        self.assertNotIn("@ITEMTYPES@", self.text)
+
+    def test_one_entry_for_every_file_with_the_clsid(self):
+        root = ET.fromstring(self.text.encode("utf-8"))
+        types = list(root.iter(NS_DESKTOP10 + "ItemType"))
+        self.assertEqual([t.get("Type") for t in types], ["*"])
+        verbs = list(types[0].iter(NS_DESKTOP10 + "Verb"))
+        self.assertEqual([(v.get("Id"), v.get("Clsid")) for v in verbs], [("0000ConvertMenu", CLSID)])
 
     def test_identity_publisher_matches_scripts(self):
         root = ET.fromstring(self.text.encode("utf-8"))
@@ -86,7 +93,6 @@ class PowerShellScripts(unittest.TestCase):
                 self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
 
 
-@unittest.skipUnless(DLL.exists(), f"{DLL} is not built")
 class InstallerExtensionList(unittest.TestCase):
     """convert.iss repeats the extension list (RemoveMenuVerbs); a new format must be added there too."""
 
@@ -97,6 +103,7 @@ class InstallerExtensionList(unittest.TestCase):
         self.assertEqual(set(m.group(1).strip(",").split(",")), set(EXT_TYPE))
 
 
+@unittest.skipUnless(DLL.exists(), f"{DLL} is not built")
 class BuildMsix(unittest.TestCase):
     def test_build_creates_signed_package_and_removes_key(self):
         with tempfile.TemporaryDirectory() as out:
@@ -125,8 +132,8 @@ class BuildMsix(unittest.TestCase):
                 self.assertIn("AppxSignature.p7x", names)
                 self.assertIn("Assets/storelogo.png", names)
                 manifest = ET.fromstring(z.read("AppxManifest.xml"))
-            types = {el.get("Type") for el in manifest.iter(NS_DESKTOP5 + "ItemType")}
-            self.assertEqual(types, {"." + e for e in EXT_TYPE})
+            types = {el.get("Type") for el in manifest.iter(NS_DESKTOP10 + "ItemType")}
+            self.assertEqual(types, {"*"})
             self.assertEqual(manifest.find(NS_APPX + "Identity").get("Version"), "0.2.4.0")
 
 

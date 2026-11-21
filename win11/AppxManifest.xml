@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Template for the sparse package. tools\make_msix.ps1 replaces @VERSION@ and @ITEMTYPES@. -->
+<!-- Template for the sparse package. tools\make_msix.ps1 replaces @VERSION@. -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
@@ -7,8 +7,9 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
   xmlns:desktop5="http://schemas.microsoft.com/appx/manifest/desktop/windows10/5"
+  xmlns:desktop10="http://schemas.microsoft.com/appx/manifest/desktop/windows10/10"
   xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
-  IgnorableNamespaces="uap uap10 rescap desktop4 desktop5 com">
+  IgnorableNamespaces="uap uap10 rescap desktop4 desktop5 desktop10 com">
   <Identity Name="TheCreator0169.Convert" Publisher="CN=TheCreator0169" Version="@VERSION@.0" ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>Convert</DisplayName>
@@ -20,7 +21,7 @@
     <Resource Language="en-us" />
   </Resources>
   <Dependencies>
-    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26300.0" />
   </Dependencies>
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
@@ -32,7 +33,11 @@
       <Extensions>
         <desktop4:Extension Category="windows.fileExplorerContextMenus">
           <desktop4:FileExplorerContextMenus>
-@ITEMTYPES@
+            <!-- One entry for every file: ConvertMenu.dll hides it unless a selected file has a supported extension.
+                 Windows 11 lists packaged entries from other apps under "Applications extensions" (seen on build 26300). -->
+            <desktop10:ItemType Type="*">
+              <desktop10:Verb Id="0000ConvertMenu" Clsid="6D1C2F3A-8B47-4E59-9A0C-3F5B7E21D4C8" />
+            </desktop10:ItemType>
           </desktop4:FileExplorerContextMenus>
         </desktop4:Extension>
         <com:Extension Category="windows.comServer">
