@@ -35,6 +35,15 @@ if ($LASTEXITCODE) { throw "PyInstaller failed" }
 & $py -I tools\smoke_frozen.py dist\Convert\Convert.exe
 if ($LASTEXITCODE) { throw "frozen smoke test failed: no installer made" }
 
+# Windows 11 top-level menu: native DLL, then a sparse MSIX signed with a throw-away certificate (key deleted by the script).
+powershell -NoProfile -File tools\build_shell_ext.ps1
+if ($LASTEXITCODE) { throw "shell extension build failed" }
+powershell -NoProfile -File tools\make_msix.ps1 -Version $Version.TrimStart('v')
+if ($LASTEXITCODE) { throw "MSIX build failed" }
+Copy-Item build\shell_ext\ConvertMenu.dll dist\Convert\ -Force
+New-Item -ItemType Directory dist\Convert\win11 -Force | Out-Null
+foreach ($f in 'Convert.msix', 'Convert.cer', 'register.ps1', 'unregister.ps1') { Copy-Item "build\win11\$f" dist\Convert\win11\ -Force }
+
 $rel = "archives\$Version-release"
 New-Item -ItemType Directory $rel -Force | Out-Null
 $files = @('dist\Convert\Convert.exe')

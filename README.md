@@ -28,7 +28,7 @@ A HEIC with several images, converted to a single-image format, gives one file p
 3. Right-click any file and choose **Convert**.
 
 - Windows warns "protected your PC"? Click **More info**, then **Run anyway**. The installer is not signed.
-- Windows 11: the entry is under **Show more options** (or Shift+F10).
+- Windows 11: the setup offers **Show Convert in the Windows 11 right-click menu** (ticked by default). It registers a small signed package and adds a certificate, trusted for your account only (no admin prompt), so **Convert** appears in the short menu. Untick it and the entry stays under **Show more options** (or Shift+F10). What is trusted and how to remove it: [SECURITY.md](SECURITY.md).
 - Audio and video need ffmpeg: `winget install Gyan.FFmpeg`. Everything else works without it.
 
 Untested on other machines: keep your originals until you trust it.
@@ -39,7 +39,11 @@ Theme: right-click the version label at the bottom of the window and choose Syst
 
 ## Uninstall
 
-Windows Settings, Apps, Convert. It removes the program and the menu entry, and asks whether to keep your settings.
+Windows Settings, Apps, Convert. It removes the program, the menu entries, the Windows 11 package and its certificate, and asks whether to keep your settings.
+
+## Security
+
+Everything runs locally; the only network call is the optional daily update check. The installer is not code-signed, and it needs no admin rights. The Windows 11 menu option adds one self-signed certificate (`CN=TheCreator0169`) to your own account's Trusted People store; its private key is deleted when the release is built. Full list of what is installed, trusted and removed, and how to report a problem: [SECURITY.md](SECURITY.md).
 
 ## Known limits
 

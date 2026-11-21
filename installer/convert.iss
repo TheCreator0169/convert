@@ -40,6 +40,8 @@ english.FfmpegFound=ffmpeg was found: audio and video conversion is available.
 french.FfmpegFound=ffmpeg a ete trouve : la conversion audio et video est disponible.
 english.FfmpegMissing=ffmpeg was not found. Images and documents work now; audio and video need ffmpeg. To install it, open a terminal and run: winget install Gyan.FFmpeg  (then restart Convert).
 french.FfmpegMissing=ffmpeg est introuvable. Les images et les documents fonctionnent; l'audio et la video demandent ffmpeg. Pour l'installer, ouvrez un terminal et lancez : winget install Gyan.FFmpeg  (puis relancez Convert).
+english.Win11Menu=Show Convert in the Windows 11 right-click menu (adds a certificate for your account only)
+french.Win11Menu=Afficher Convert dans le menu clic droit de Windows 11 (ajoute un certificat pour votre compte seulement)
 english.OpenConvert=Open Convert
 french.OpenConvert=Ouvrir Convert
 english.AppRunning=Convert is already running. Close it, then click OK to continue, or Cancel to quit.
@@ -47,13 +49,17 @@ french.AppRunning=Convert est deja ouvert. Fermez-le, puis cliquez sur OK pour c
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "win11menu"; Description: "{cm:Win11Menu}"; GroupDescription: "{cm:AdditionalIcons}"; Check: IsWin11
 
 [InstallDelete]
 ; An upgrade starts from a clean program folder, so files dropped from the app do not linger. Settings and logs live elsewhere.
 Type: filesandordirs; Name: "{app}\_internal"
 
 [Files]
-Source: "..\dist\Convert\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+Source: "..\dist\Convert\*"; DestDir: "{app}"; Excludes: "win11\*,ConvertMenu.dll"; Flags: recursesubdirs ignoreversion
+; The Windows 11 menu files go only to Windows 11
+Source: "..\dist\Convert\ConvertMenu.dll"; DestDir: "{app}"; Flags: ignoreversion; Check: IsWin11
+Source: "..\dist\Convert\win11\*"; DestDir: "{app}\win11"; Flags: ignoreversion; Check: IsWin11
 
 [Icons]
 Name: "{userprograms}\Convert"; Filename: "{app}\Convert.exe"
@@ -62,9 +68,12 @@ Name: "{userdesktop}\Convert"; Filename: "{app}\Convert.exe"; Tasks: desktopicon
 [Run]
 ; Adds "Convert" to the Explorer right-click menu (HKCU only)
 Filename: "{app}\Convert.exe"; Parameters: "--install-menu"; Flags: runhidden
+; Windows 11 top-level entry: a signed sparse package; its certificate is trusted for this user only (no admin). A failure here leaves the classic entry working.
+Filename: "{sysnative}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\win11\register.ps1"" -AppDir ""{app}"""; Flags: runhidden skipifdoesntexist; Tasks: win11menu; Check: IsWin11
 Filename: "{app}\Convert.exe"; Description: "{cm:OpenConvert}"; Flags: postinstall nowait skipifsilent
 
 [UninstallRun]
+Filename: "{sysnative}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\win11\unregister.ps1"""; Flags: runhidden skipifdoesntexist; RunOnceId: "RemoveWin11Menu"
 Filename: "{app}\Convert.exe"; Parameters: "--uninstall-menu"; Flags: runhidden; RunOnceId: "RemoveMenu"
 
 [UninstallDelete]
@@ -102,6 +111,29 @@ begin
       Result := True;
       Exit;
     end;
+  end;
+end;
+
+function IsWin11(): Boolean;
+var
+  V: TWindowsVersion;
+begin
+  GetWindowsVersionEx(V);
+  Result := (V.Major = 10) and (V.Build >= 22000);
+end;
+
+{ An upgrade: unregister the old package first, so Explorer's COM host lets go of ConvertMenu.dll before the files are replaced. }
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  Script: String;
+  Code: Integer;
+begin
+  if CurStep = ssInstall then
+  begin
+    Script := ExpandConstant('{app}\win11\unregister.ps1');
+    if FileExists(Script) then
+      Exec(ExpandConstant('{sysnative}\WindowsPowerShell\v1.0\powershell.exe'),
+        '-NoProfile -ExecutionPolicy Bypass -File "' + Script + '"', '', SW_HIDE, ewWaitUntilTerminated, Code);
   end;
 end;
 

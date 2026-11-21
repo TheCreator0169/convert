@@ -1,0 +1,31 @@
+// Version values come from build/shell_ext/ver.h, written by tools/build_shell_ext.ps1.
+#include <winver.h>
+#include "ver.h"
+
+1 VERSIONINFO
+FILEVERSION     CONVERT_VERSION_NUM
+PRODUCTVERSION  CONVERT_VERSION_NUM
+FILEFLAGSMASK   0x3fL
+FILEFLAGS       0x0L
+FILEOS          0x40004L
+FILETYPE        0x2L
+FILESUBTYPE     0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "FileDescription", "Convert shell extension"
+            VALUE "FileVersion", CONVERT_VERSION_STR
+            VALUE "InternalName", "ConvertMenu"
+            VALUE "LegalCopyright", "Copyright (c) 2026 TheCreator0169. MIT License."
+            VALUE "OriginalFilename", "ConvertMenu.dll"
+            VALUE "ProductName", "Convert"
+            VALUE "ProductVersion", CONVERT_VERSION_STR
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
