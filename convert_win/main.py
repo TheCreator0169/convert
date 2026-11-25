@@ -1,4 +1,5 @@
-"""Entry point. `--cli [format] files...` converts without a window; `--cli` alone lists formats."""
+"""Entry point. `--cli [format] files...` converts without a window; `--cli` alone lists formats.
+`--quick <format> files...` converts without a window and shows a tray notification (the Explorer flyout)."""
 import sys
 from pathlib import Path
 
@@ -39,6 +40,9 @@ def main(argv=None):
     settings.setup_logging()
     if argv and argv[0] == "--cli":
         return cli(argv[1:])
+    if argv and argv[0] == "--quick":
+        from . import quick
+        return quick.run(argv[1:])
     if argv and argv[0] in ("--install-menu", "--uninstall-menu"):
         from . import shell_integration
         (shell_integration.install if argv[0] == "--install-menu" else shell_integration.uninstall)()

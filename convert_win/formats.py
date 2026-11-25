@@ -48,6 +48,10 @@ OUTPUTS = {
         ("txt", "Plain text", "txt")),
 }
 
+# the short lists shown in the Explorer flyout (a subset of OUTPUTS, in the order shown)
+QUICK = {"image": ("jpg", "png", "webp", "pdf"), "audio": ("mp3", "m4a", "wav", "flac"),
+         "video": ("mp4", "webm", "gif", "mp3"), "doc": ("pdf", "docx", "txt"), "pdf": ("png", "jpg", "txt")}
+
 DEFAULTS = {
     "audio": {"bitrate": 192, "sample_rate": 0, "channels": 0, "bit_depth": 16, "audio_track": 1},
     "video": {"video_quality": "medium", "height": 0, "fps": 0, "keep_audio": True, "audio_track": 1, "subtitles": False,
@@ -100,6 +104,14 @@ def output_fmt(src, fmt_id):
     if t is None or fmt_id not in OUTPUTS[t]:
         raise ValueError(f"cannot convert {Path(src).name} to {fmt_id}")
     return t, OUTPUTS[t][fmt_id]
+
+
+def quick_fmt(type_, fmt_id):
+    """Fmt of a flyout entry (QUICK). A video entry that is not a video format is an audio one, as in output_fmt."""
+    if fmt_id not in QUICK.get(type_, ()):
+        raise ValueError(f"{fmt_id} is not a quick format for {type_}")
+    t = "audio" if type_ == "video" and fmt_id not in OUTPUTS["video"] else type_
+    return OUTPUTS[t][fmt_id]
 
 
 def option_key(kind, fmt_id):

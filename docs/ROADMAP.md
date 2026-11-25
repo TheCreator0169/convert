@@ -1,6 +1,6 @@
 # Convert for Windows: roadmap
 
-Status 2026-11-21: **v0.2.3 is the latest published release** (v0.2.4 Windows 11 menu in progress, not published) (public on `github.com/TheCreator0169/convert`, MIT). This file is the plan as it was written, kept as history: each table says what was built, released or dropped. Release dates are in `docs\progress.md`. The versions did not ship in the order below (v0.1.9 brought the installer pages, the window came in v0.1.11, v0.1.10 was never published); see progress.md for what each release contains.
+Status 2026-11-25: **v0.2.3 is the latest published release** (v0.2.4 Windows 11 menu and v0.2.5 quick-convert submenu: not published, see `docs\progress.md`) (public on `github.com/TheCreator0169/convert`, MIT). This file is the plan as it was written, kept as history: each table says what was built, released or dropped. Release dates are in `docs\progress.md`. The versions did not ship in the order below (v0.1.9 brought the installer pages, the window came in v0.1.11, v0.1.10 was never published); see progress.md for what each release contains.
 
 Goal stays the same: right-click a file, choose Convert, done. 100 % local, no account, no telemetry.
 
