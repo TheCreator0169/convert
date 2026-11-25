@@ -13,7 +13,7 @@ _tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
 
 
 def setUpModule():
-    # no real conversion and no real tray: convert_file and notify are patched in every test that runs quick.run
+    # no real conversion and no real toast: convert_file and notify are patched in every test that runs quick.run
     os.environ["APPDATA"] = os.environ["LOCALAPPDATA"] = _tmp.name
 
 
@@ -137,6 +137,49 @@ class QuickRun(unittest.TestCase):
         with mock.patch("convert_win.quick.run", return_value=0) as run:
             self.assertEqual(main.main(["--quick", "jpg", self.path("a.png")]), 0)
         run.assert_called_once_with(["jpg", self.path("a.png")])
+
+
+class Toast(unittest.TestCase):
+    """notify shows a PowerShell toast; the sender key lives under a throw-away HKCU base and is removed by uninstall."""
+
+    def setUp(self):
+        import uuid
+        import winreg
+        self.winreg = winreg
+        self.base = rf"Software\ConvertTest-{uuid.uuid4().hex}"
+        self.key = rf"{self.base}\AppUserModelId\{quick.AUMID}"
+        mock.patch.object(quick, "AUMID_KEY", self.key).start()
+        self.addCleanup(mock.patch.stopall)
+        self.addCleanup(self.drop)
+
+    def drop(self):
+        from convert_win import shell_integration
+        for p in (self.key, rf"{self.base}\AppUserModelId", self.base):
+            shell_integration._delete(p)
+
+    def test_text_goes_through_the_environment_not_the_script(self):
+        with mock.patch("subprocess.run") as run:
+            quick.notify("T", "a'b\"<c>", error=True)
+        args, kw = run.call_args
+        self.assertEqual(kw["env"]["CONVERT_TOAST_TEXT"], "a'b\"<c>")
+        self.assertEqual(kw["env"]["CONVERT_TOAST_TITLE"], "T")
+        self.assertNotIn("a'b", " ".join(args[0]))
+        self.assertEqual(args[0][0].lower().rsplit("\\", 1)[-1], "powershell.exe")
+        with self.winreg.OpenKey(self.winreg.HKEY_CURRENT_USER, self.key) as k:
+            self.assertEqual(self.winreg.QueryValueEx(k, "DisplayName")[0], "Convert")
+
+    def test_a_failing_toast_is_swallowed(self):
+        with mock.patch("subprocess.run", side_effect=OSError("boom")):
+            quick.notify("T", "x")  # must not raise
+
+    def test_uninstall_removes_the_sender_key(self):
+        from convert_win import shell_integration
+        with mock.patch("subprocess.run"):
+            quick.notify("T", "x")
+        with mock.patch.object(shell_integration, "_notify"):
+            shell_integration.uninstall(base=self.base)
+        with self.assertRaises(OSError):
+            self.winreg.OpenKey(self.winreg.HKEY_CURRENT_USER, self.key)
 
 
 if __name__ == "__main__":

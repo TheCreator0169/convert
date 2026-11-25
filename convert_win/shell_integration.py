@@ -65,6 +65,9 @@ def uninstall(base=BASE):
             _delete_if_empty(verb.rsplit("\\", 1)[0])
             _delete_if_empty(verb.rsplit("\\", 2)[0])
     _delete_if_empty(rf"{base}\SystemFileAssociations")
+    from .quick import AUMID  # the toast sender name written by `--quick`
+    _delete(rf"{base}\AppUserModelId\{AUMID}")
+    _delete_if_empty(rf"{base}\AppUserModelId")
     _notify()
 
 

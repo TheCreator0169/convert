@@ -1,5 +1,5 @@
 """Entry point. `--cli [format] files...` converts without a window; `--cli` alone lists formats.
-`--quick <format> files...` converts without a window and shows a tray notification (the Explorer flyout)."""
+`--quick <format> files...` converts without a window and shows a Windows toast notification (the Explorer flyout)."""
 import sys
 from pathlib import Path
 

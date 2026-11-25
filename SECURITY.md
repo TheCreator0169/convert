@@ -17,6 +17,7 @@ Open an [issue](https://github.com/TheCreator0169/convert/issues) on this reposi
 |---|---|---|
 | Program | `%LOCALAPPDATA%\Programs\Convert` | Uninstall |
 | Classic right-click entries | `HKCU\Software\Classes\SystemFileAssociations\.<ext>\shell\Convert` | Uninstall |
+| Notification sender name (written on the first quick conversion; the toast is shown by a hidden `powershell.exe`, the text never goes into the script) | `HKCU\Software\Classes\AppUserModelId\Convert.QuickConvert` | Uninstall |
 | Settings, logs | `%APPDATA%\Convert`, `%LOCALAPPDATA%\Convert` | Uninstall (settings only if you say yes) |
 
 ## The Windows 11 menu option (Windows 11 only, ticked by default)
