@@ -1,5 +1,6 @@
 """Headless quick convert for the Windows 11 Explorer flyout: `Convert.exe --quick <fmt_id> files...`.
 No window and no console output: the start (long jobs only) and the result are Windows toasts, see `notify`."""
+import sys
 from pathlib import Path
 
 from . import settings
@@ -15,7 +16,9 @@ _TOAST = r"""
 [void][Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]
 [void][Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime]
 $x = New-Object Windows.Data.Xml.Dom.XmlDocument
-$x.LoadXml('<toast><visual><binding template="ToastGeneric"><text/><text/></binding></visual></toast>')
+$x.LoadXml('<toast><visual><binding template="ToastGeneric"><image placement="appLogoOverride"/><text/><text/></binding></visual></toast>')
+$i = $x.GetElementsByTagName('image').Item(0)
+if ($env:CONVERT_TOAST_ICON -and (Test-Path -LiteralPath $env:CONVERT_TOAST_ICON)) { $i.SetAttribute('src', ([System.Uri]$env:CONVERT_TOAST_ICON).AbsoluteUri) } else { [void]$i.ParentNode.RemoveChild($i) }
 $t = $x.GetElementsByTagName('text')
 $t.Item(0).InnerText = $env:CONVERT_TOAST_TITLE
 $t.Item(1).InnerText = $env:CONVERT_TOAST_TEXT
@@ -23,11 +26,18 @@ $t.Item(1).InnerText = $env:CONVERT_TOAST_TEXT
 """
 
 
+def _icon():
+    """The logo shown in the toast: bundled data folder when frozen, the repo otherwise."""
+    root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))
+    return str(root / "assets" / "logo.png")
+
+
 def _register_sender():
     """HKCU only: gives the toast its name (Convert) in the notification and in Settings."""
     import winreg
     with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, AUMID_KEY, 0, winreg.KEY_WRITE) as k:
         winreg.SetValueEx(k, "DisplayName", 0, winreg.REG_SZ, TITLE)
+        winreg.SetValueEx(k, "IconUri", 0, winreg.REG_SZ, _icon())
 
 
 def notify(title, text, error=False):
@@ -40,7 +50,7 @@ def notify(title, text, error=False):
         _register_sender()
         ps = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "WindowsPowerShell", "v1.0", "powershell.exe")
         enc = base64.b64encode(_TOAST.encode("utf-16-le")).decode()
-        env = dict(os.environ, CONVERT_TOAST_TITLE=title, CONVERT_TOAST_TEXT=text, CONVERT_TOAST_AUMID=AUMID)
+        env = dict(os.environ, CONVERT_TOAST_TITLE=title, CONVERT_TOAST_TEXT=text, CONVERT_TOAST_AUMID=AUMID, CONVERT_TOAST_ICON=_icon())
         subprocess.run([ps, "-NoProfile", "-NonInteractive", "-EncodedCommand", enc], env=env, timeout=20,
                        creationflags=0x08000000, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                        stderr=subprocess.DEVNULL, check=False)  # 0x08000000 = CREATE_NO_WINDOW
